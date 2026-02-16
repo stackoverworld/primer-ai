@@ -1,0 +1,47 @@
+{
+  "name": "primer-ai",
+  "version": "0.1.59",
+  "description": "Beta CLI that scaffolds AI-optimized project architecture for Codex and Claude Code.",
+  "type": "module",
+  "bin": {
+    "primer-ai": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20.10.0"
+  },
+  "scripts": {
+    "prebuild": "node scripts/bump-version.mjs",
+    "build": "tsup",
+    "dev": "tsx src/cli.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "tsc --noEmit"
+  },
+  "keywords": [
+    "cli",
+    "scaffold",
+    "ai",
+    "agents",
+    "codex",
+    "claude"
+  ],
+  "author": "stackoverworld",
+  "license": "MIT",
+  "dependencies": {
+    "@clack/prompts": "1.0.1",
+    "commander": "14.0.3",
+    "zod": "4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "25.2.3",
+    "tsup": "8.5.1",
+    "tsx": "4.21.0",
+    "typescript": "5.9.3",
+    "vitest": "4.0.18"
+  }
+}
