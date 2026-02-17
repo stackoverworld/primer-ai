@@ -11,7 +11,7 @@ Deliver a TypeScript/Node.js CLI that is predictable for agents, easy to evolve,
 - Use a deterministic orchestration runtime for Codex refactor execution (planner -> orchestrator -> worker roles) instead of pure prompt-only coordination.
 - Define strict contracts for config, execution plans, and reports so Codex can compose workflows without reading internal modules.
 - Prefer deterministic execution: explicit inputs, stable ordering, no hidden environment dependencies, and machine-readable outputs.
-- Keep task-graph execution/reporting APIs as planned work; current runtime focuses on `init`, `refactor`, and `fix` command contracts.
+- Keep task-graph execution/reporting APIs as planned work; current runtime focuses on `init`, `refactor`, `fix`, and `generate-logs` command contracts.
 - Treat refactor progress as a contract: adaptive pass budgets, actionable status text, and no hardcoded pass denominators.
 - Persist refactor checkpoints so interrupted runs can resume from the last completed pass rather than restarting pass 1.
 - Keep docs progressively disclosed: short overview first, then command/module-specific deep dives linked from it.
@@ -29,6 +29,7 @@ Deliver a TypeScript/Node.js CLI that is predictable for agents, easy to evolve,
 | `src/commands/refactor/resume.ts` | Checkpoint persistence for resumable refactor runs (`.primer-ai/refactor-resume.json`). |
 | `src/commands/fix.ts` | Verification-driven AI fix loop that detects actionable failures and applies iterative repair passes. |
 | `src/commands/fix/*.ts` | Fix-command helpers split by prompt composition, execution choices, workflow setup, and verification command orchestration. |
+| `src/commands/generate-logs.ts` | AI-driven release-log generator that inspects git deltas, validates version ranges against GitHub tags, and emits GitHub-style `Changes`/`Fixes` markdown sections. |
 | `src/core/refactor.ts` | Stable public facade that re-exports refactor scan/prompt/execution APIs. |
 | `src/core/refactor/contracts.ts` | Shared refactor contracts consumed across scan, prompt, and execution modules. |
 | `src/core/refactor/scan.ts` | Deterministic source scanning, hotspot scoring, and repository refactor analysis output. |

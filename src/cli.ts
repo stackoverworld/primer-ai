@@ -5,6 +5,7 @@ import { log } from "@clack/prompts";
 import { Command } from "commander";
 
 import { runFix } from "./commands/fix.js";
+import { runGenerateLogs } from "./commands/generate-logs.js";
 import { runInit } from "./commands/init.js";
 import { runRefactor } from "./commands/refactor.js";
 import {
@@ -14,7 +15,7 @@ import {
   toJsonErrorPayload,
   type CliOutputFormat
 } from "./core/errors.js";
-import type { FixCommandOptions, InitCommandOptions, RefactorCommandOptions } from "./core/types.js";
+import type { FixCommandOptions, GenerateLogsCommandOptions, InitCommandOptions, RefactorCommandOptions } from "./core/types.js";
 import packageJson from "../package.json" with { type: "json" };
 
 const program = new Command();
@@ -218,6 +219,31 @@ program
     outputFormat = normalizeOutputFormat(rawOptions.format);
     renderBrandHeader(pathArg);
     await runFix(pathArg, rawOptions);
+  });
+
+program
+  .command("generate-logs")
+  .description("Generate GitHub-style release logs from previous version/tag to the current state.")
+  .argument("[path]", "Target repository directory (defaults to current working directory)")
+  .option("--from <ref>", "Base tag/ref (default: previous reachable tag)")
+  .option("--to <ref>", "Target ref (default: HEAD)")
+  .option("--from-version <version>", "Base version (e.g. 0.1.59) resolved to a matching tag")
+  .option("--to-version <version>", "Target version (e.g. 0.1.79) resolved to a matching tag")
+  .option("--output <path>", "Output markdown file path", "RELEASE_LOG.md")
+  .option("--thanks <handle>", "GitHub handle appended to each entry (optional)")
+  .option("--stdout", "Print generated markdown to stdout", false)
+  .option("--no-uncommitted", "Ignore staged/unstaged/untracked working tree changes")
+  .option("--provider <provider>", "auto | codex | claude")
+  .option("--agent <target>", "codex | claude | both")
+  .option("--model <model>", "Model id to use when provider is codex or claude")
+  .option("--ai-timeout-sec <seconds>", "Timeout per AI subprocess in seconds (default: 1800)")
+  .option("--show-ai-file-ops", "Show AI file edit/create operations in console output", false)
+  .option("--no-show-ai-file-ops", "Hide AI file edit/create operations in console output")
+  .option("--format <format>", "text | json output format (errors)", "text")
+  .action(async (pathArg: string | undefined, rawOptions: GenerateLogsCommandOptions) => {
+    outputFormat = normalizeOutputFormat(rawOptions.format);
+    renderBrandHeader(pathArg);
+    await runGenerateLogs(pathArg, rawOptions);
   });
 
 program

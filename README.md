@@ -1,9 +1,10 @@
 # primer-ai
 
-`primer-ai` is a beta TypeScript CLI for three jobs:
+`primer-ai` is a beta TypeScript CLI for four jobs:
 - bootstrap a repository with AI-ready project architecture and maintainable agent context
 - run AI-guided refactors on existing codebases using your locally installed agent CLI
 - run AI-guided verification/fix loops that detect and remediate actionable repo issues
+- generate GitHub-style release log notes from previous version/tag to current state
 
 The project started from deep research across modern AI workflows (including ChatGPT and Claude research tooling) to capture practical patterns that are usually missing when teams run ad-hoc `/init` prompts.
 
@@ -50,7 +51,7 @@ It also includes refactor and fix workflows for medium and large repositories, w
   - `claude` (supported fallback path)
 
 `init --mode template` works without AI CLIs.
-`init --mode ai-assisted`, `refactor`, and `fix` require an installed and authenticated AI CLI.
+`init --mode ai-assisted`, `refactor`, `fix`, and `generate-logs` require an installed and authenticated AI CLI.
 
 ## Quick Start
 
@@ -95,6 +96,18 @@ Run AI-assisted fix loop (detect verification failures, apply fixes, re-check):
 
 ```bash
 npx primer-ai fix . --provider auto
+```
+
+Generate release logs in GitHub markdown style:
+
+```bash
+npx primer-ai generate-logs .
+```
+
+Generate release logs between two versions (even if current `HEAD` is newer):
+
+```bash
+npx primer-ai generate-logs . --from-version 0.1.59 --to-version 0.1.79
 ```
 
 ## Refactor Workflow
@@ -199,6 +212,32 @@ Options:
 - `--dry-run` run detection only, no AI edits
 - `--format <format>` `text | json` (controls error output format)
 - `-y, --yes` non-interactive execution choices
+
+### `primer-ai generate-logs [path]`
+
+Purpose:
+- AI-analyze repository deltas and generate GitHub release-note markdown in `### Changes` / `### Fixes` style
+- default base version comes from latest section in `RELEASE_LOG.md`; if no section exists, latest GitHub tag (`origin`) is used
+- store logs by version sections (`## from -> to`) and prepend newest section at the top without deleting older sections
+- omit empty sections (`### Fixes` is skipped when there are no fixes)
+- if AI returns no changes and no fixes, show this in console and keep the file unchanged
+
+Options:
+- `--from <ref>` explicit base tag/ref (default: auto previous reachable tag)
+- `--to <ref>` target ref (default `HEAD`)
+- `--from-version <version>` base version like `0.1.59` that must exist on GitHub tags (`origin`)
+- `--to-version <version>` target version like `0.1.79` that must exist on GitHub tags (`origin`)
+- `--output <path>` output markdown file (default `RELEASE_LOG.md`)
+- `--thanks <handle>` GitHub handle appended to each entry (optional)
+- `--stdout` print generated markdown to stdout
+- `--no-uncommitted` ignore staged/unstaged/untracked local changes
+- `--provider <provider>` `auto | codex | claude` (default `auto`)
+- `--agent <target>` `codex | claude | both` (default `codex`)
+- `--model <model>` model id when provider is fixed
+- `--ai-timeout-sec <seconds>` timeout per AI subprocess (default `1800`, clamped to `60..14400`)
+- `--show-ai-file-ops` / `--no-show-ai-file-ops` stream AI file-operation output during generation (default `false`)
+- note: when `--from-version` or `--to-version` is used, uncommitted changes are ignored automatically to keep historical range generation deterministic
+- `--format <format>` `text | json` (controls error output format)
 
 ## AI Provider Resolution
 
