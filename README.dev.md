@@ -46,6 +46,20 @@ Use explicit version bumps for predictable releases:
 ```bash
 npm run release:patch   # or release:minor / release:major
 git push --follow-tags
+```
+
+After `git push --follow-tags`, GitHub Actions publishes automatically from tag workflow
+`.github/workflows/release-publish.yml`.
+
+### One-time setup (required)
+
+1. In GitHub repo settings, add secret `NPM_TOKEN` (token must be allowed to publish).
+2. In npm account settings, keep publish auth/2FA enabled.
+3. Ensure tags are pushed as `vX.Y.Z` and `package.json.version` matches that tag.
+
+If you prefer manual fallback publish:
+
+```bash
 npm run release:publish
 ```
 

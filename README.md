@@ -280,7 +280,8 @@ npm run build
 Notes:
 - `npm run build` only builds distributable files and does not change version
 - bump version explicitly with `npm run release:patch` / `npm run release:minor` / `npm run release:major`
-- publish after versioning with `npm run release:publish`
+- push tags with `git push --follow-tags` to trigger automated npm publish via `.github/workflows/release-publish.yml`
+- manual fallback publish is available with `npm run release:publish`
 - source entrypoint for local iteration: `npm run dev`
 
 Related project docs:
