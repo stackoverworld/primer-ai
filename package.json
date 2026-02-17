@@ -36,6 +36,10 @@
   ],
   "author": "stackoverworld",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/stackoverworld/primer-ai"
+  },
   "dependencies": {
     "@clack/prompts": "1.0.1",
     "commander": "14.0.3",
