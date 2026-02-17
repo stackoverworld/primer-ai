@@ -53,6 +53,27 @@ It also includes refactor and fix workflows for medium and large repositories, w
 `init --mode template` works without AI CLIs.
 `init --mode ai-assisted`, `refactor`, `fix`, and `generate-logs` require an installed and authenticated AI CLI.
 
+## Install and Use
+
+Run without installing (always uses latest published version):
+
+```bash
+npx primer-ai@latest --help
+```
+
+Install globally:
+
+```bash
+npm i -g primer-ai
+primer-ai --help
+```
+
+Check installed version:
+
+```bash
+primer-ai --version
+```
+
 ## Quick Start
 
 Initialize in the current directory:
@@ -257,7 +278,9 @@ npm run build
 ```
 
 Notes:
-- `npm run build` runs `prebuild` and auto-increments patch version
+- `npm run build` only builds distributable files and does not change version
+- bump version explicitly with `npm run release:patch` / `npm run release:minor` / `npm run release:major`
+- publish after versioning with `npm run release:publish`
 - source entrypoint for local iteration: `npm run dev`
 
 Related project docs:

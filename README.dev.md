@@ -37,8 +37,34 @@ npm run build
 ```
 
 Important:
-- `npm run build` runs `scripts/bump-version.mjs` first
-- this auto-increments patch version in `package.json`
+- `npm run build` only compiles output and does not modify versions
+
+## Release
+
+Use explicit version bumps for predictable releases:
+
+```bash
+npm run release:patch   # or release:minor / release:major
+git push --follow-tags
+npm run release:publish
+```
+
+## Published Package Smoke Test
+
+After publishing, verify users can run the CLI from npm:
+
+```bash
+npx primer-ai@latest --version
+npx primer-ai@latest --help
+```
+
+Optional global-install check:
+
+```bash
+npm i -g primer-ai
+primer-ai --version
+primer-ai --help
+```
 
 ## Local CLI Run
 
