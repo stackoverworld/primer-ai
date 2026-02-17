@@ -1,6 +1,7 @@
 import { existsSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 
+import { UserInputError } from "../../core/errors.js";
 import type { RefactorCommandOptions } from "../../core/types.js";
 
 import { normalizeMaxFiles, normalizeMaxPasses } from "./scan.js";
@@ -39,7 +40,7 @@ function normalizeMaxSubagents(value: number | string | undefined): number {
       return Math.min(MAX_MAX_SUBAGENTS, Math.max(MIN_MAX_SUBAGENTS, parsed));
     }
   }
-  throw new Error(
+  throw new UserInputError(
     `Invalid --max-subagents value "${String(value)}". Expected an integer between ${MIN_MAX_SUBAGENTS} and ${MAX_MAX_SUBAGENTS}.`
   );
 }
@@ -53,7 +54,7 @@ function normalizeAiTimeoutMs(value: number | string | undefined): number {
         ? Number.parseInt(value, 10)
         : Number.NaN;
   if (!Number.isFinite(parsed)) {
-    throw new Error(
+    throw new UserInputError(
       `Invalid --ai-timeout-sec value "${String(value)}". Expected an integer between ${MIN_AI_TIMEOUT_SEC} and ${MAX_AI_TIMEOUT_SEC}.`
     );
   }
@@ -67,7 +68,7 @@ export function prepareRefactorWorkflow(
 ): PreparedRefactorWorkflow {
   const targetDir = resolve(process.cwd(), pathArg ?? ".");
   if (!existsSync(targetDir) || !statSync(targetDir).isDirectory()) {
-    throw new Error(`Target path is not a directory: ${targetDir}`);
+    throw new UserInputError(`Target path is not a directory: ${targetDir}`);
   }
 
   const dryRun = options.dryRun ?? false;
@@ -82,7 +83,7 @@ export function prepareRefactorWorkflow(
   if (notes.length > 0) {
     promptOptions.notes = notes.join("\n");
   }
-  const showAiFileOps = options.showAiFileOps ?? false;
+  const showAiFileOps = options.showAiFileOps ?? true;
   const orchestration = options.orchestration ?? true;
   const maxSubagents = normalizeMaxSubagents(options.maxSubagents);
   promptOptions.orchestration = orchestration;

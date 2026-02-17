@@ -40,7 +40,8 @@ export async function generateAiDraft(input: InitInput, plan: ProjectPlan, optio
     runStructuredTask(provider, prompt, draftOutputSchema, {
       cwd: options.cwd,
       onStatus: options.onStatus,
-      model: input.aiModel
+      model: input.aiModel,
+      timeoutMs: options.aiTimeoutMs
     })
   );
 

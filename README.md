@@ -1,8 +1,9 @@
 # primer-ai
 
-`primer-ai` is a beta TypeScript CLI for two jobs:
+`primer-ai` is a beta TypeScript CLI for three jobs:
 - bootstrap a repository with AI-ready project architecture and maintainable agent context
 - run AI-guided refactors on existing codebases using your locally installed agent CLI
+- run AI-guided verification/fix loops that detect and remediate actionable repo issues
 
 The project started from deep research across modern AI workflows (including ChatGPT and Claude research tooling) to capture practical patterns that are usually missing when teams run ad-hoc `/init` prompts.
 
@@ -14,7 +15,7 @@ Most AI coding sessions are stateless and inconsistent across runs. `primer-ai` 
 - `skills/` catalog with trigger tests
 - maintenance checks that keep instructions and docs fresh over time
 
-It also includes a refactor workflow for medium and large repositories, with resumable multi-pass execution and Codex orchestration support.
+It also includes refactor and fix workflows for medium and large repositories, with resumable multi-pass refactor execution and Codex orchestration support.
 
 ## Current Status
 
@@ -49,7 +50,7 @@ It also includes a refactor workflow for medium and large repositories, with res
   - `claude` (supported fallback path)
 
 `init --mode template` works without AI CLIs.
-`init --mode ai-assisted` and `refactor` require an installed and authenticated AI CLI.
+`init --mode ai-assisted`, `refactor`, and `fix` require an installed and authenticated AI CLI.
 
 ## Quick Start
 
@@ -88,6 +89,12 @@ Run scan-only dry run:
 
 ```bash
 npx primer-ai refactor . --dry-run
+```
+
+Run AI-assisted fix loop (detect verification failures, apply fixes, re-check):
+
+```bash
+npx primer-ai fix . --provider auto
 ```
 
 ## Refactor Workflow
@@ -142,8 +149,9 @@ Options:
 - `--cursor` / `--no-cursor` generate `.cursor/rules` (default `false`)
 - `--git-init` / `--no-git-init` initialize Git if missing (default `true`)
 - `--quick-setup` run supported quick setup after scaffold (default `false`)
+- `--format <format>` `text | json` (controls error output format)
 - `-y, --yes` skip prompts and use defaults
-- `--force` allow scaffolding into non-empty folder
+- `--force` overwrite existing scaffold paths instead of creating `.primer-ai.generated` variants
 
 ### `primer-ai refactor [path]`
 
@@ -161,14 +169,35 @@ Options:
 - `--agent <target>` `codex | claude | both` (used with `--provider auto`)
 - `--notes <text>` custom notes for scan/refactor prompt
 - `--focus <text>` merged into notes
-- `--show-ai-file-ops` stream AI file edit/create output (default `false`)
+- `--show-ai-file-ops` / `--no-show-ai-file-ops` stream compact AI file-operation events (default `true`); known noisy provider internals and prompt-echo text are suppressed, and file ops are shown as concise `Read/Created/Updated/Deleted file` lines
 - `--orchestration` / `--no-orchestration` Codex orchestration toggle (default `true`)
 - `--max-subagents <count>` orchestration workers `1..24` (default `12`)
 - `--max-files <count>` scan file cap (default auto)
 - `--max-passes <count>` pass cap (default adaptive)
 - `--ai-timeout-sec <seconds>` timeout per AI subprocess (default `1800`, clamped to `60..14400`)
+- `--format <format>` `text | json` (controls error output format)
 - `--resume` / `--no-resume` checkpoint behavior (default `true`)
 - `--dry-run` generate prompt only, no AI execution
+- `-y, --yes` non-interactive execution choices
+
+### `primer-ai fix [path]`
+
+Purpose:
+- detect verification failures based on stack policy, scripts, and installed package tooling
+- run iterative AI fix passes and re-run checks until actionable failures clear or pass cap is reached
+
+Options:
+- `--provider <provider>` `auto | codex | claude` (default `auto`)
+- `--model <model>` model id when provider is fixed
+- `--agent <target>` `codex | claude | both` (used with `--provider auto`)
+- `--notes <text>` custom notes for AI fix prompt
+- `--focus <text>` merged into notes
+- `--show-ai-file-ops` / `--no-show-ai-file-ops` stream compact AI file-operation events (default `true`)
+- `--max-files <count>` scan file cap (default `20000`, clamped to `80..120000`)
+- `--max-passes <count>` AI fix hard pass cap (clamped to `1..12`); when omitted, starts from `3` and can adaptively grow up to `12` if actionable failures remain
+- `--ai-timeout-sec <seconds>` timeout per AI subprocess (default `1800`, clamped to `60..14400`)
+- `--dry-run` run detection only, no AI edits
+- `--format <format>` `text | json` (controls error output format)
 - `-y, --yes` non-interactive execution choices
 
 ## AI Provider Resolution
@@ -177,7 +206,7 @@ Options:
 - If provider is `auto`, primer-ai prefers provider by agent target and binary availability
 - If no compatible `codex`/`claude` binary is found:
   - `init` can fall back to deterministic templates for new/empty projects
-  - `refactor` fails with a provider warning
+  - `refactor` and `fix` fail with a provider warning
 
 ## Local Development
 

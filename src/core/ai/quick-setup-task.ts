@@ -42,7 +42,8 @@ export async function generateAiQuickSetupPlan(
     runStructuredTask(provider, prompt, quickSetupOutputSchema, {
       cwd: options.cwd,
       onStatus: options.onStatus,
-      model: input.aiModel
+      model: input.aiModel,
+      timeoutMs: options.aiTimeoutMs
     })
   );
 

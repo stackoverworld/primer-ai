@@ -9,5 +9,5 @@
 - `docs/runbooks/local-dev.md`: environment setup and local operation guide.
 - `skills/**/SKILL.md`: reusable task playbooks loaded only when relevant.
 - `src/commands/AGENTS.md`: Command UX, validation, and error ergonomics. (applies inside `src/commands/`).
-- `src/lib/AGENTS.md`: Core orchestration and side-effect boundaries. (applies inside `src/lib/`).
+- `src/core/AGENTS.md`: Core orchestration and side-effect boundaries. (applies inside `src/core/`).
 - `tests/AGENTS.md`: End-to-end command scenarios and edge cases. (applies inside `tests/`).

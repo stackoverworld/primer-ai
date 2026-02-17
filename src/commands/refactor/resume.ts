@@ -89,6 +89,7 @@ function isValidCheckpointShape(value: unknown): value is RefactorResumeCheckpoi
     typeof candidate.nextPass === "number" &&
     Number.isFinite(candidate.nextPass) &&
     candidate.nextPass >= 1 &&
+    candidate.nextPass <= candidate.plannedPasses + 1 &&
     typeof candidate.maxFiles === "number" &&
     Number.isFinite(candidate.maxFiles) &&
     candidate.maxFiles >= 1 &&
@@ -107,9 +108,6 @@ export async function loadRefactorResumeCheckpoint(targetDir: string): Promise<L
       return null;
     }
     if (resolve(parsed.targetDir) !== resolve(targetDir)) {
-      return null;
-    }
-    if (parsed.nextPass > parsed.plannedPasses) {
       return null;
     }
     return {

@@ -1,6 +1,6 @@
 # Local Development Runbook
 
-- Last reviewed: 2026-02-14
+- Last reviewed: 2026-02-16
 
 ## Prerequisites
 - Runtime/toolchain for your selected stack.
@@ -20,6 +20,9 @@
 - `npm run test`
 - `npm run build`
 - Launch: `npm run dev`
+
+## Migration Notes
+- 2026-02-16: `primer-ai fix` is available for verification-first remediation loops (`scan -> verify -> AI fix pass -> re-verify`). Prefer this command when the goal is correctness/stability fixes rather than structural refactoring.
 
 ## Troubleshooting
 - If checks fail, fix root cause before continuing.

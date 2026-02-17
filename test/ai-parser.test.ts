@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { __internal } from "../src/core/ai.js";
+import { parseQuickSetupFromOutput } from "../src/core/ai-parsing.js";
 
 describe("ai output parsing", () => {
   it("parses Claude JSON wrapper with fenced JSON in result", () => {
@@ -59,5 +60,22 @@ tokens used
     const parsed = __internal.parseDraftFromOutput(raw);
     expect(parsed).not.toBeNull();
     expect(parsed?.initialModules[0]?.path).toBe("src/http");
+  });
+
+  it("parses quick-setup payload wrapped in an array", () => {
+    const raw = JSON.stringify([
+      {
+        includeTesting: true,
+        includeLinting: true,
+        includeFormatting: true,
+        runtimeProfile: "express",
+        notes: ["Enable deterministic defaults"]
+      }
+    ]);
+
+    const parsed = parseQuickSetupFromOutput(raw);
+    expect(parsed).not.toBeNull();
+    expect(parsed?.includeTesting).toBe(true);
+    expect(parsed?.runtimeProfile).toBe("express");
   });
 });

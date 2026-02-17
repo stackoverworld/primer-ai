@@ -18,10 +18,12 @@ interface RunAiFreeformTaskOptions {
   cwd?: string;
   onStatus?: StatusCallback;
   aiTimeoutMs?: number;
+  sandboxMode?: "workspace-write" | "read-only";
   showAiFileOps?: boolean;
   orchestration?: boolean;
   maxSubagents?: number;
   expectFileWrites?: boolean;
+  stopOnRefactorStatusMarker?: boolean;
 }
 
 const WRITE_BLOCK_MARKERS = [
@@ -36,7 +38,7 @@ const WRITE_BLOCK_MARKERS = [
   "non-writable from the sandbox policy"
 ] as const;
 
-const REFACTOR_STATUS_MARKER = /PRIMER_REFACTOR_STATUS:\s*(COMPLETE|CONTINUE)/i;
+const REFACTOR_STATUS_MARKER = /^\s*PRIMER_REFACTOR_STATUS:\s*(COMPLETE|CONTINUE)\s*$/im;
 
 function hasWriteBlockSignal(output: string): boolean {
   const lower = output.toLowerCase();
@@ -79,11 +81,14 @@ export async function runAiFreeformTask(options: RunAiFreeformTaskOptions): Prom
   const commandResult = await runWithLiveStatus(provider, options.onStatus, () =>
     runFreeformTask(provider, options.prompt, {
       cwd: options.cwd,
+      onStatus: options.onStatus,
       model: options.model,
       timeoutMs: options.aiTimeoutMs,
+      sandboxMode: options.sandboxMode,
       showAiFileOps: options.showAiFileOps,
       orchestration: options.orchestration,
-      maxSubagents: options.maxSubagents
+      maxSubagents: options.maxSubagents,
+      stopOnRefactorStatusMarker: options.stopOnRefactorStatusMarker ?? (options.expectFileWrites ?? false)
     })
   );
 

@@ -19,7 +19,7 @@ function tailLines(output: string, maxLines = 16): string {
 }
 
 function parsePassStatus(output: string): "complete" | "continue" | "unknown" {
-  const matches = Array.from(output.matchAll(/PRIMER_REFACTOR_STATUS:\s*(COMPLETE|CONTINUE)/gi));
+  const matches = Array.from(output.matchAll(/^\s*PRIMER_REFACTOR_STATUS:\s*(COMPLETE|CONTINUE)\s*$/gim));
   const last = matches.at(-1);
   if (!last?.[1]) return "unknown";
   return last[1].toUpperCase() === "COMPLETE" ? "complete" : "continue";

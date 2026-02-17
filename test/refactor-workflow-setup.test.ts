@@ -7,6 +7,7 @@ describe("prepareRefactorWorkflow", () => {
     const workflow = prepareRefactorWorkflow(undefined, {});
     expect(workflow.resume).toBe(true);
     expect(workflow.aiTimeoutMs).toBe(1_800_000);
+    expect(workflow.showAiFileOps).toBe(true);
   });
 
   it("supports explicit resume disable and clamps ai-timeout range", () => {

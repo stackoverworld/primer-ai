@@ -10,6 +10,6 @@
 | `docs/skills.md` | Skill curation and trigger discipline. |
 | `.agents/fragments/root` | Composable fragments used to build AGENTS.md. |
 | `src/commands` | Command definitions and argument parsing. |
-| `src/lib` | Shared services used by commands. |
+| `src/core` | Shared orchestration, AI/runtime adapters, and template logic used by commands. |
 | `tests` | CLI behavior validation. |
 | `scripts` | Automation helpers. |

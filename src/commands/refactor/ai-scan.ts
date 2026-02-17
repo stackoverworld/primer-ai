@@ -52,6 +52,7 @@ export async function calibrateScanWithAi(options: AiScanCalibrationOptions): Pr
     prompt,
     provider: options.provider,
     targetAgent: options.targetAgent,
+    sandboxMode: "read-only",
     ...(options.model ? { model: options.model } : {}),
     cwd: options.scan.targetDir,
     ...(typeof options.aiTimeoutMs === "number" ? { aiTimeoutMs: options.aiTimeoutMs } : {}),

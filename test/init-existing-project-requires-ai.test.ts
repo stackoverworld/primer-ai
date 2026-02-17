@@ -183,4 +183,128 @@ describe("runInit for existing projects", () => {
       rmSync(tempDir, { recursive: true, force: true });
     }
   });
+
+  it("preserves conflicting files by default using .primer-ai.generated variants", async () => {
+    const tempDir = mkdtempSync(join(tmpdir(), "primer-ai-force-default-"));
+    writeFileSync(join(tempDir, "AGENTS.md"), "# Existing agents context\n");
+
+    mocks.collectInitInput.mockResolvedValue({
+      projectName: "existing-app",
+      description: "Migrate existing app context.",
+      techStack: "TypeScript + Node.js",
+      existingProject: true,
+      projectShape: "cli-tool",
+      targetAgent: "codex",
+      includeCursorRules: false,
+      generationMode: "ai-assisted",
+      aiProvider: "auto",
+      initializeGit: false,
+      runAiQuickSetup: false
+    });
+    mocks.buildProjectPlan.mockReturnValue({
+      directories: [],
+      scopedInstructions: [],
+      repositoryAreas: [],
+      verificationCommands: [],
+      launchCommand: "npm run dev"
+    });
+    mocks.generateAiDraft.mockResolvedValue({
+      draft: {
+        mission: "Migrate existing app context.",
+        architectureSummary: ["A", "B", "C"],
+        initialModules: [
+          { path: "src/a", purpose: "A" },
+          { path: "src/b", purpose: "B" },
+          { path: "src/c", purpose: "C" }
+        ],
+        apiSurface: ["GET /health", "POST /events"],
+        conventions: ["c1", "c2", "c3", "c4"],
+        qualityGates: ["npm run lint", "npm run test", "npm run build"],
+        risks: ["r1", "r2"]
+      },
+      providerUsed: "codex"
+    });
+    mocks.createScaffoldFiles.mockReturnValue([
+      {
+        path: "AGENTS.md",
+        content: "# New agents context\n"
+      }
+    ]);
+
+    try {
+      const { runInit } = await import("../src/commands/init.js");
+      await runInit(tempDir, {});
+
+      const firstCall = mocks.writeScaffold.mock.calls[0] as unknown[] | undefined;
+      const filesArg = (firstCall?.[2] as Array<{ path: string; content: string }> | undefined) ?? [];
+      const paths = filesArg.map((file) => file.path);
+      expect(paths).toContain("AGENTS.primer-ai.generated.md");
+      expect(paths).not.toContain("AGENTS.md");
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  it("overwrites conflicting scaffold paths when --force is set", async () => {
+    const tempDir = mkdtempSync(join(tmpdir(), "primer-ai-force-overwrite-"));
+    writeFileSync(join(tempDir, "AGENTS.md"), "# Existing agents context\n");
+
+    mocks.collectInitInput.mockResolvedValue({
+      projectName: "existing-app",
+      description: "Migrate existing app context.",
+      techStack: "TypeScript + Node.js",
+      existingProject: true,
+      projectShape: "cli-tool",
+      targetAgent: "codex",
+      includeCursorRules: false,
+      generationMode: "ai-assisted",
+      aiProvider: "auto",
+      initializeGit: false,
+      runAiQuickSetup: false
+    });
+    mocks.buildProjectPlan.mockReturnValue({
+      directories: [],
+      scopedInstructions: [],
+      repositoryAreas: [],
+      verificationCommands: [],
+      launchCommand: "npm run dev"
+    });
+    mocks.generateAiDraft.mockResolvedValue({
+      draft: {
+        mission: "Migrate existing app context.",
+        architectureSummary: ["A", "B", "C"],
+        initialModules: [
+          { path: "src/a", purpose: "A" },
+          { path: "src/b", purpose: "B" },
+          { path: "src/c", purpose: "C" }
+        ],
+        apiSurface: ["GET /health", "POST /events"],
+        conventions: ["c1", "c2", "c3", "c4"],
+        qualityGates: ["npm run lint", "npm run test", "npm run build"],
+        risks: ["r1", "r2"]
+      },
+      providerUsed: "codex"
+    });
+    mocks.createScaffoldFiles.mockReturnValue([
+      {
+        path: "AGENTS.md",
+        content: "# New agents context\n"
+      }
+    ]);
+
+    try {
+      const { runInit } = await import("../src/commands/init.js");
+      await runInit(tempDir, { force: true });
+
+      const firstCall = mocks.writeScaffold.mock.calls[0] as unknown[] | undefined;
+      const filesArg = (firstCall?.[2] as Array<{ path: string; content: string }> | undefined) ?? [];
+      const forceArg = firstCall?.[3] as boolean | undefined;
+      const paths = filesArg.map((file) => file.path);
+      expect(paths).toContain("AGENTS.md");
+      expect(paths).not.toContain("AGENTS.primer-ai.generated.md");
+      expect(forceArg).toBe(true);
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
 });

@@ -127,13 +127,7 @@ function normalizePayload(payload: unknown): unknown {
   }
 
   if (Array.isArray(payload)) {
-    for (const item of payload) {
-      const normalized = normalizePayload(item);
-      const parsed = draftSchema.safeParse(normalized);
-      if (parsed.success) return parsed.data;
-    }
-
-    return payload;
+    return payload.map((item) => normalizePayload(item));
   }
 
   if (!payload || typeof payload !== "object") return payload;
@@ -168,6 +162,14 @@ export function parseWithSchema<T>(raw: string, schema: z.ZodType<T>): T | null 
 
     try {
       const parsed = normalizePayload(JSON.parse(candidate));
+      if (Array.isArray(parsed)) {
+        for (const item of parsed) {
+          const normalizedItem = normalizePayload(item);
+          const validatedItem = schema.safeParse(normalizedItem);
+          if (validatedItem.success) return validatedItem.data;
+        }
+        continue;
+      }
       const validated = schema.safeParse(parsed);
       if (validated.success) return validated.data;
     } catch {

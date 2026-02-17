@@ -268,7 +268,7 @@ describe("refactor multi-pass loop", () => {
     }
   });
 
-  it("uses adaptive pass budget by default instead of a static 40-pass cap", async () => {
+  it("extends adaptive budget by default before stopping on repeated stagnant backlog", async () => {
     const targetPath = mkdtempSync(join(tmpdir(), "primer-ai-refactor-adaptive-pass-budget-"));
     const hotspot = {
       path: "src/core/refactor.ts",
@@ -298,8 +298,126 @@ describe("refactor multi-pass loop", () => {
           provider: "codex",
           model: "gpt-5.3-codex"
         })
-      ).rejects.toThrow("Refactor incomplete after 1 passes");
-      expect(mocks.runRefactorPrompt).toHaveBeenCalledTimes(1);
+      ).rejects.toThrow("Refactor stalled after pass 2");
+      expect(mocks.runRefactorPrompt).toHaveBeenCalledTimes(2);
+    } finally {
+      rmSync(targetPath, { recursive: true, force: true });
+    }
+  });
+
+  it("raises adaptive pass budget when rescans reveal larger remaining backlog", async () => {
+    const targetPath = mkdtempSync(join(tmpdir(), "primer-ai-refactor-adaptive-pass-growth-"));
+
+    const initialHotspot = {
+      path: "src/core/refactor.ts",
+      lineCount: 800,
+      commentLines: 12,
+      lowSignalCommentLines: 4,
+      todoCount: 0,
+      importCount: 30,
+      internalImportCount: 20,
+      fanIn: 8,
+      exportCount: 12,
+      functionCount: 28,
+      classCount: 0,
+      score: 99,
+      reasons: ["high fan-in"],
+      splitHypothesis: "Split by responsibilities"
+    };
+
+    const monolithA = {
+      path: "src/legacy/a.ts",
+      lineCount: 900,
+      commentLines: 20,
+      lowSignalCommentLines: 6,
+      todoCount: 1,
+      importCount: 30,
+      internalImportCount: 22,
+      fanIn: 7,
+      exportCount: 10,
+      functionCount: 32,
+      classCount: 1
+    };
+    const monolithB = {
+      ...monolithA,
+      path: "src/legacy/b.ts"
+    };
+    const monolithC = {
+      ...monolithA,
+      path: "src/legacy/c.ts"
+    };
+
+    mocks.scanRepositoryForRefactor
+      .mockReturnValueOnce(createScan({ couplingCandidates: [initialHotspot] }))
+      .mockReturnValueOnce(createScan({ monolithCandidates: [monolithA, monolithB, monolithC] }))
+      .mockReturnValueOnce(createScan());
+
+    mocks.runRefactorPrompt
+      .mockResolvedValueOnce({ executed: true, outputTail: "pass1", passStatus: "continue" })
+      .mockResolvedValueOnce({ executed: true, outputTail: "pass2", passStatus: "complete" });
+
+    try {
+      const { runRefactor } = await import("../src/commands/refactor.js");
+      await runRefactor(targetPath, {
+        yes: true,
+        provider: "codex",
+        model: "gpt-5.3-codex"
+      });
+
+      expect(mocks.runRefactorPrompt).toHaveBeenCalledTimes(2);
+      expect(mocks.scanRepositoryForRefactor).toHaveBeenCalledTimes(3);
+    } finally {
+      rmSync(targetPath, { recursive: true, force: true });
+    }
+  });
+
+  it("continues automatically beyond 12 adaptive passes when backlog remains actionable", async () => {
+    const targetPath = mkdtempSync(join(tmpdir(), "primer-ai-refactor-adaptive-beyond-12-"));
+    const makeHotspot = (index: number) => ({
+      path: `src/core/refactor-${index}.ts`,
+      lineCount: 800,
+      commentLines: 12,
+      lowSignalCommentLines: 4,
+      todoCount: 0,
+      importCount: 30,
+      internalImportCount: 20,
+      fanIn: 8,
+      exportCount: 12,
+      functionCount: 28,
+      classCount: 0,
+      score: 99,
+      reasons: ["high fan-in"],
+      splitHypothesis: "Split by responsibilities"
+    });
+
+    const scanSequence = [
+      createScan({ couplingCandidates: [makeHotspot(0)] }),
+      ...Array.from({ length: 12 }, (_, index) => createScan({ couplingCandidates: [makeHotspot(index + 1)] })),
+      createScan()
+    ];
+
+    const runSequence = [
+      ...Array.from({ length: 12 }, (_, index) => ({
+        executed: true,
+        outputTail: `pass${index + 1}`,
+        passStatus: "continue" as const
+      })),
+      { executed: true, outputTail: "pass13", passStatus: "complete" as const }
+    ];
+
+    mocks.scanRepositoryForRefactor.mockImplementation(() => scanSequence.shift() ?? createScan());
+    mocks.runRefactorPrompt.mockImplementation(async () => runSequence.shift() ?? { executed: true, outputTail: "done", passStatus: "complete" });
+
+    try {
+      const { runRefactor } = await import("../src/commands/refactor.js");
+      await runRefactor(targetPath, {
+        yes: true,
+        provider: "codex",
+        model: "gpt-5.3-codex"
+      });
+
+      expect(mocks.runRefactorPrompt).toHaveBeenCalledTimes(13);
+      expect(mocks.scanRepositoryForRefactor).toHaveBeenCalledTimes(14);
     } finally {
       rmSync(targetPath, { recursive: true, force: true });
     }
@@ -590,6 +708,73 @@ describe("refactor multi-pass loop", () => {
       expect(resumeCall.model).toBe("gpt-5.3-codex");
       expect(resumeCall.showAiFileOps).toBe(true);
       expect(resumeCall.maxSubagents).toBe(6);
+      expect(existsSync(checkpointPath)).toBe(false);
+    } finally {
+      rmSync(targetPath, { recursive: true, force: true });
+    }
+  });
+
+  it("extends adaptive pass budget on resume when checkpoint next pass exceeds planned passes", async () => {
+    const targetPath = mkdtempSync(join(tmpdir(), "primer-ai-refactor-resume-adaptive-extend-"));
+    const checkpointPath = join(targetPath, ".primer-ai", "refactor-resume.json");
+    const hotspot = {
+      path: "src/core/refactor.ts",
+      lineCount: 800,
+      commentLines: 12,
+      lowSignalCommentLines: 4,
+      todoCount: 0,
+      importCount: 30,
+      internalImportCount: 20,
+      fanIn: 8,
+      exportCount: 12,
+      functionCount: 28,
+      classCount: 0,
+      score: 99,
+      reasons: ["high fan-in"],
+      splitHypothesis: "Split by responsibilities"
+    };
+
+    mocks.scanRepositoryForRefactor
+      .mockReturnValueOnce(createScan({ couplingCandidates: [hotspot] }))
+      .mockReturnValueOnce(createScan());
+    mocks.runRefactorPrompt.mockResolvedValueOnce({ executed: true, outputTail: "pass13", passStatus: "complete" });
+
+    const checkpointPayload = {
+      version: 1,
+      targetDir: targetPath,
+      plannedPasses: 12,
+      nextPass: 13,
+      maxFiles: 20_000,
+      scan: createScan({ couplingCandidates: [hotspot] }),
+      backlog: {
+        monolithCount: 0,
+        couplingCount: 1,
+        debtCount: 0,
+        commentCount: 0
+      },
+      execution: {
+        provider: "codex",
+        targetAgent: "codex",
+        model: "gpt-5.3-codex",
+        showAiFileOps: true,
+        orchestration: true,
+        maxSubagents: 6
+      },
+      updatedAt: new Date().toISOString()
+    };
+
+    try {
+      const fs = await import("node:fs/promises");
+      await fs.mkdir(join(targetPath, ".primer-ai"), { recursive: true });
+      await fs.writeFile(checkpointPath, `${JSON.stringify(checkpointPayload, null, 2)}\n`, "utf8");
+
+      const { runRefactor } = await import("../src/commands/refactor.js");
+      await runRefactor(targetPath, {
+        yes: true
+      });
+
+      expect(mocks.runRefactorPrompt).toHaveBeenCalledTimes(1);
+      expect(mocks.scanRepositoryForRefactor).toHaveBeenCalledTimes(2);
       expect(existsSync(checkpointPath)).toBe(false);
     } finally {
       rmSync(targetPath, { recursive: true, force: true });

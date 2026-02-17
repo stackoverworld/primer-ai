@@ -11,12 +11,29 @@ export function runCommand(command: string, args: string[], cwd: string): Promis
   const timeoutMs = 8 * 60 * 1000;
   const maxBufferBytes = 8 * 1024 * 1024;
 
+  const trimToTailWithinBytes = (value: string): string => {
+    if (Buffer.byteLength(value, "utf8") <= maxBufferBytes) return value;
+    let low = 0;
+    let high = value.length;
+    while (low < high) {
+      const mid = Math.floor((low + high) / 2);
+      const sliced = value.slice(mid);
+      if (Buffer.byteLength(sliced, "utf8") > maxBufferBytes) {
+        low = mid + 1;
+      } else {
+        high = mid;
+      }
+    }
+    return value.slice(low);
+  };
+
   return new Promise((resolveResult) => {
     let stdout = "";
     let stderr = "";
     let completed = false;
     let timedOut = false;
-    let exceededBuffer = false;
+    let stdoutTruncated = false;
+    let stderrTruncated = false;
     let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
 
     const resolveOnce = (result: CommandResult): void => {
@@ -31,23 +48,37 @@ export function runCommand(command: string, args: string[], cwd: string): Promis
       stdio: ["ignore", "pipe", "pipe"]
     });
 
-    const appendChunk = (buffer: string, chunk: string): string => {
-      const next = buffer + chunk;
-      if (Buffer.byteLength(next, "utf8") > maxBufferBytes) {
-        exceededBuffer = true;
-        child.kill("SIGKILL");
-      }
-      return next;
+    const appendChunk = (
+      buffer: string,
+      chunk: string
+    ): {
+      next: string;
+      truncated: boolean;
+    } => {
+      const rawNext = buffer + chunk;
+      return {
+        next: trimToTailWithinBytes(rawNext),
+        truncated: Buffer.byteLength(rawNext, "utf8") > maxBufferBytes
+      };
+    };
+
+    const withOutputTailNotice = (reason: string): string => {
+      if (!stdoutTruncated && !stderrTruncated) return reason;
+      return `${reason}; output truncated to last ${maxBufferBytes} bytes per stream`;
     };
 
     child.stdout?.setEncoding("utf8");
     child.stdout?.on("data", (chunk: string) => {
-      stdout = appendChunk(stdout, chunk);
+      const appended = appendChunk(stdout, chunk);
+      stdout = appended.next;
+      stdoutTruncated = stdoutTruncated || appended.truncated;
     });
 
     child.stderr?.setEncoding("utf8");
     child.stderr?.on("data", (chunk: string) => {
-      stderr = appendChunk(stderr, chunk);
+      const appended = appendChunk(stderr, chunk);
+      stderr = appended.next;
+      stderrTruncated = stderrTruncated || appended.truncated;
     });
 
     child.on("error", (error) => {
@@ -55,7 +86,7 @@ export function runCommand(command: string, args: string[], cwd: string): Promis
         ok: false,
         stdout,
         stderr,
-        reason: error.message
+        reason: withOutputTailNotice(error.message)
       });
     });
 
@@ -65,16 +96,7 @@ export function runCommand(command: string, args: string[], cwd: string): Promis
           ok: false,
           stdout,
           stderr,
-          reason: `timeout after ${timeoutMs / 1000}s`
-        });
-        return;
-      }
-      if (exceededBuffer) {
-        resolveOnce({
-          ok: false,
-          stdout,
-          stderr,
-          reason: `output exceeded ${maxBufferBytes} bytes`
+          reason: withOutputTailNotice(`timeout after ${timeoutMs / 1000}s`)
         });
         return;
       }
@@ -83,7 +105,7 @@ export function runCommand(command: string, args: string[], cwd: string): Promis
           ok: false,
           stdout,
           stderr,
-          reason: `exit code ${code ?? "unknown"}`
+          reason: withOutputTailNotice(`exit code ${code ?? "unknown"}`)
         });
         return;
       }

@@ -57,6 +57,13 @@ describe("runAiFreeformTask write access guard", () => {
     expect(result.ok).toBe(false);
     expect(result.providerUsed).toBe("codex");
     expect(result.warning).toContain("write-enabled Codex sandbox");
+    expect(mocks.runFreeformTask).toHaveBeenCalledWith(
+      "codex",
+      "Apply refactor now",
+      expect.objectContaining({
+        stopOnRefactorStatusMarker: true
+      })
+    );
   });
 
   it("does not fail on write-block hints when file writes are not required", async () => {
@@ -76,6 +83,32 @@ describe("runAiFreeformTask write access guard", () => {
 
     expect(result.ok).toBe(true);
     expect(result.warning).toBeUndefined();
+  });
+
+  it("forwards explicit sandbox mode to provider execution", async () => {
+    mocks.runFreeformTask.mockResolvedValue({
+      ok: true,
+      stdout: "ready",
+      stderr: ""
+    });
+
+    const { runAiFreeformTask } = await import("../src/core/ai/freeform-task.js");
+    const result = await runAiFreeformTask({
+      prompt: "Draft a plan only",
+      provider: "codex",
+      targetAgent: "codex",
+      sandboxMode: "read-only",
+      expectFileWrites: false
+    });
+
+    expect(result.ok).toBe(true);
+    expect(mocks.runFreeformTask).toHaveBeenCalledWith(
+      "codex",
+      "Draft a plan only",
+      expect.objectContaining({
+        sandboxMode: "read-only"
+      })
+    );
   });
 
   it("accepts timeout when terminal PRIMER_REFACTOR_STATUS marker is present", async () => {
@@ -103,6 +136,26 @@ describe("runAiFreeformTask write access guard", () => {
     mocks.runFreeformTask.mockResolvedValue({
       ok: false,
       stdout: "still working",
+      stderr: "",
+      reason: "timeout after 1800s"
+    });
+
+    const { runAiFreeformTask } = await import("../src/core/ai/freeform-task.js");
+    const result = await runAiFreeformTask({
+      prompt: "Apply refactor now",
+      provider: "codex",
+      targetAgent: "codex",
+      expectFileWrites: true
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.warning).toContain("Could not complete AI task");
+  });
+
+  it("keeps timeout as failure when marker appears only inside echoed instructions", async () => {
+    mocks.runFreeformTask.mockResolvedValue({
+      ok: false,
+      stdout: "Final line required: PRIMER_REFACTOR_STATUS: COMPLETE",
       stderr: "",
       reason: "timeout after 1800s"
     });

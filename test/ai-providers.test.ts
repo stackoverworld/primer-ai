@@ -112,4 +112,101 @@ describe("ai provider command wiring", () => {
       }
     );
   });
+
+  it("uses read-only sandbox + default 30m timeout for codex structured tasks", async () => {
+    const { runStructuredTask } = await import("../src/core/ai/providers.js");
+    mocks.runCommand.mockResolvedValueOnce({
+      ok: true,
+      stdout: "{}",
+      stderr: ""
+    });
+
+    await runStructuredTask("codex", "plan only", {
+      type: "object",
+      properties: {}
+    });
+
+    const firstCall = mocks.runCommand.mock.calls[0] as unknown[] | undefined;
+    expect(firstCall?.[0]).toBe("codex");
+    const args = (firstCall?.[1] as string[] | undefined) ?? [];
+    expect(args.includes("read-only")).toBe(true);
+    expect(args.includes("--output-schema")).toBe(true);
+    expect(firstCall?.[2]).toEqual({
+      cwd: undefined,
+      timeoutMs: 1_800_000
+    });
+  });
+
+  it("forwards explicit structured timeout", async () => {
+    const { runStructuredTask } = await import("../src/core/ai/providers.js");
+    mocks.runCommand.mockResolvedValueOnce({
+      ok: true,
+      stdout: "{}",
+      stderr: ""
+    });
+
+    await runStructuredTask("claude", "plan only", {
+      type: "object",
+      properties: {}
+    }, {
+      timeoutMs: 90_000
+    });
+
+    const firstCall = mocks.runCommand.mock.calls[0] as unknown[] | undefined;
+    expect(firstCall?.[0]).toBe("claude");
+    expect(firstCall?.[2]).toEqual({
+      cwd: undefined,
+      timeoutMs: 90_000
+    });
+  });
+
+  it("warns before claude fallback without no-session-persistence", async () => {
+    const { runFreeformTask } = await import("../src/core/ai/providers.js");
+    const onStatus = vi.fn();
+
+    mocks.runCommand
+      .mockResolvedValueOnce({
+        ok: false,
+        stdout: "",
+        stderr: "unknown option --no-session-persistence",
+        reason: "exit code 1"
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        stdout: "ok",
+        stderr: ""
+      });
+
+    await runFreeformTask("claude", "refactor now", {
+      onStatus
+    });
+
+    expect(onStatus).toHaveBeenCalledWith(
+      expect.stringContaining("retry will run without --no-session-persistence")
+    );
+    expect(mocks.runCommand).toHaveBeenNthCalledWith(
+      2,
+      "claude",
+      ["-p", "refactor now"],
+      expect.objectContaining({
+        cwd: undefined,
+        inheritOutput: false,
+        onActivity: expect.any(Function)
+      })
+    );
+  });
+
+  it("uses standalone-line matcher for stop-on-refactor-status", async () => {
+    const { runFreeformTask } = await import("../src/core/ai/providers.js");
+
+    await runFreeformTask("codex", "refactor now", {
+      stopOnRefactorStatusMarker: true
+    });
+
+    const options = mocks.runCommand.mock.calls[0]?.[2] as { stopOnOutputPattern?: RegExp } | undefined;
+    const pattern = options?.stopOnOutputPattern;
+    expect(pattern).toBeInstanceOf(RegExp);
+    expect(pattern?.test("PRIMER_REFACTOR_STATUS: COMPLETE")).toBe(true);
+    expect(pattern?.test("Final line required: PRIMER_REFACTOR_STATUS: COMPLETE")).toBe(false);
+  });
 });

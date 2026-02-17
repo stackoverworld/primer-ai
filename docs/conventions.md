@@ -3,9 +3,9 @@
 - Last reviewed: 2026-02-14
 
 ## Coding
-- Each command file exports `command`, `describe`, `builder`, and `handler` for predictable CLI wiring.
-- No business logic in `src/commands`; all side effects are mediated through `src/lib` abstractions.
-- All cross-module data must use types from `src/lib/contracts.ts`; avoid ad-hoc object shapes.
+- Command modules expose focused runners invoked from `src/cli.ts`; CLI wiring stays centralized.
+- Keep heavy orchestration logic in `src/core` or focused command-helper modules; avoid monolithic command handlers.
+- All cross-module data must use shared types from `src/core/types.ts`; avoid ad-hoc object shapes.
 - Config precedence is fixed and documented: defaults < file < environment < CLI flags.
 - Errors are typed (`ConfigError`, `ExecutionError`, `UserInputError`) and mapped to stable exit codes.
 - Documentation follows progressive disclosure: top-level summary, then linked deep sections per command/module.

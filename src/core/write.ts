@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import { mkdir, readdir, stat, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
+import { UserInputError } from "./errors.js";
 import type { FileArtifact } from "./types.js";
 
 function normalize(path: string): string {
@@ -26,14 +27,14 @@ export async function prepareTargetDirectory(targetDir: string, force: boolean, 
   await mkdir(targetDir, { recursive: true });
   const targetStats = await stat(targetDir);
   if (!targetStats.isDirectory()) {
-    throw new Error(`Target path is not a directory: ${targetDir}`);
+    throw new UserInputError(`Target path is not a directory: ${targetDir}`);
   }
 
   const entries = await readdir(targetDir);
   const meaningfulEntries = entries.filter((entry) => ![".git", ".DS_Store"].includes(entry));
 
   if (meaningfulEntries.length > 0 && !force && !allowNonEmpty) {
-    throw new Error(
+    throw new UserInputError(
       `Target directory is not empty (${meaningfulEntries.length} entries). Use --force to scaffold anyway.`
     );
   }

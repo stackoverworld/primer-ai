@@ -17,16 +17,16 @@ The project also needed consistent Codex-first defaults while preserving optiona
 - Make Codex the default/recommended path in init/refactor prompts and defaults; keep Claude as optional fallback.
 - Add refactor controls:
   - `--notes` (with `--focus` retained as compatibility alias and merged into one notes channel)
-  - `--show-ai-file-ops` (default off)
+  - `--[no-]show-ai-file-ops` (default on)
   - `--[no-]orchestration` (default on)
   - `--max-subagents` (default 12, clamped 1..24)
 - Add Codex orchestration guardrails directly in refactor prompts (coordinator/worker ownership, no overlapping file edits, no worker directory deletion, no nested worker spawning).
 - Pass Codex orchestration runtime override through provider execution via `codex exec -c agents.max_threads=<n>`.
-- Replace static default pass cap behavior with adaptive pass budgeting based on calibrated backlog (`monolith*3 + coupling*2 + debt + commentCleanup`, clamped to 1..12), unless `--max-passes` is explicitly set.
+- Replace static default pass cap behavior with adaptive pass budgeting based on calibrated backlog (`monolith*3 + coupling*2 + debt + commentCleanup`, clamped to 1..80 safety cap), unless `--max-passes` is explicitly set.
 - Remove "finalizing" status phrasing and keep only actionable progress text.
 
 ## Consequences
 - Refactor progress indicators now show run-specific totals instead of a hardcoded default denominator.
-- Users can suppress noisy file-operation streams by default and enable them explicitly when needed.
+- Users get compact file-operation streams by default and can suppress them with `--no-show-ai-file-ops` when needed.
 - Codex orchestration behavior is configurable and safer for concurrent refactor workflows.
 - Existing Claude support remains intact, but orchestration overrides are Codex-specific and ignored for Claude runs.

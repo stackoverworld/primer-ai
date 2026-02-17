@@ -2,6 +2,7 @@ import { relative, resolve } from "node:path";
 
 import { log } from "@clack/prompts";
 
+import { UserInputError } from "../core/errors.js";
 import { buildProjectPlan } from "../core/plan.js";
 import { collectInitInput } from "../core/prompts.js";
 import { rootAgentsLineCount } from "../core/templates.js";
@@ -27,7 +28,7 @@ export async function runInit(pathArg: string | undefined, options: InitCommandO
   const preexistingEntries = listMeaningfulEntries(targetDir);
   const input = await collectInitInput(targetDir, options);
   if (preexistingEntries.length > 0 && input.generationMode !== "ai-assisted") {
-    throw new Error("Non-empty project migration is available only in AI-assisted mode.");
+    throw new UserInputError("Non-empty project migration is available only in AI-assisted mode.");
   }
 
   const plan = buildProjectPlan(input);
@@ -40,6 +41,7 @@ export async function runInit(pathArg: string | undefined, options: InitCommandO
   const artifacts = prepareInitArtifacts({
     targetDir,
     input,
+    force,
     plan,
     draft: aiResult.draft,
     ...(aiResult.providerUsed ? { providerUsed: aiResult.providerUsed } : {}),
@@ -68,6 +70,8 @@ export async function runInit(pathArg: string | undefined, options: InitCommandO
     log.warn(
       `Preserved ${artifacts.collisions.length} existing files; generated variants use '.primer-ai.generated' suffixes.`
     );
+  } else if (input.existingProject && force) {
+    log.warn("Overwrote existing scaffold paths because --force was set.");
   }
   if (artifacts.mergedReadme) {
     log.info("Merged existing README.md with primer-ai managed context block.");

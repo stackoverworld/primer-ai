@@ -2,6 +2,7 @@ import { basename, resolve } from "node:path";
 
 import { confirm, log, outro, select, text } from "@clack/prompts";
 
+import { UserInputError } from "../errors.js";
 import { decideQuickSetupPrompt } from "../quick-setup.js";
 import { toKebabCase } from "../text.js";
 import type { AgentTarget, AiProvider, GenerationMode, InitCommandOptions, InitInput, ProjectShape } from "../types.js";
@@ -34,7 +35,7 @@ async function collectInitInput(targetPath: string, options: InitCommandOptions)
   const defaultModel = defaultProvider === "auto" ? undefined : explicitModel;
 
   if (existingProject && requestedMode === "template") {
-    throw new Error("Template mode is disabled for non-empty projects. Use AI-assisted mode for migration/setup.");
+    throw new UserInputError("Template mode is disabled for non-empty projects. Use AI-assisted mode for migration/setup.");
   }
 
   const defaultMode = existingProject ? "ai-assisted" : (requestedMode ?? "ai-assisted");

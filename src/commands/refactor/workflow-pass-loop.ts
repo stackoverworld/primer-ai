@@ -6,6 +6,7 @@ import type { AgentTarget, AiProvider } from "../../core/types.js";
 import { formatBacklogCompact, hasActionableScanBacklog, hasPendingBacklog, sameBacklog } from "./backlog.js";
 import { runRefactorPass } from "./pass-execution.js";
 import { rescanAfterPass } from "./pass-rescan.js";
+import { deriveAdaptivePassCount, MAX_ADAPTIVE_PASSES } from "./scan.js";
 import { writePromptSnapshot } from "./prompt-snapshot.js";
 import { deriveRefactorState, type RefactorPromptOptions, type RefactorWorkflowState } from "./state.js";
 import type { RefactorBacklog } from "./backlog.js";
@@ -28,6 +29,7 @@ interface ExecuteRefactorPassLoopOptions {
   showAiFileOps: boolean;
   orchestration: boolean;
   maxSubagents: number;
+  allowAdaptivePassBudgetGrowth: boolean;
   onPassCheckpoint?: (checkpoint: {
     nextPass: number;
     plannedPasses: number;
@@ -54,15 +56,17 @@ export async function executeRefactorPassLoop(options: ExecuteRefactorPassLoopOp
   const refactorStart = Date.now();
   let currentState = options.currentState;
   let maxFiles = options.maxFiles;
+  let plannedPasses = options.plannedPasses;
   let stagnantPasses = 0;
   let orchestrationIgnoredWarningLogged = false;
+  let adaptiveCapWarningLogged = false;
   const passReports: Array<{
     pass: number;
     passStatus: string;
     outputTail: string;
   }> = [];
 
-  for (let pass = options.startPass; pass <= options.plannedPasses; pass += 1) {
+  for (let pass = options.startPass; pass <= plannedPasses; pass += 1) {
     if (pass > options.startPass) {
       currentState = deriveRefactorState(currentState.scan, options.promptOptions);
       const passPromptPath = await writePromptSnapshot(options.targetDir, currentState.prompt, pass);
@@ -71,7 +75,7 @@ export async function executeRefactorPassLoop(options: ExecuteRefactorPassLoopOp
 
     const runResult = await runRefactorPass({
       pass,
-      totalPasses: options.plannedPasses,
+      totalPasses: plannedPasses,
       targetDir: options.targetDir,
       prompt: currentState.prompt,
       provider: options.provider,
@@ -104,7 +108,7 @@ export async function executeRefactorPassLoop(options: ExecuteRefactorPassLoopOp
     const rescanResult = await rescanAfterPass({
       targetDir: options.targetDir,
       pass,
-      totalPasses: options.plannedPasses,
+      totalPasses: plannedPasses,
       maxFiles,
       explicitMaxFiles: options.explicitMaxFiles,
       provider: options.provider,
@@ -119,11 +123,33 @@ export async function executeRefactorPassLoop(options: ExecuteRefactorPassLoopOp
       `Step 4/4: Pass ${pass} status ${runResult.passStatus.toUpperCase()}, backlog ${formatBacklogCompact(rescanResult.backlog)}.`
     );
 
+    const hasPending = hasPendingBacklog(rescanResult.backlog);
+    const hasActionablePending = hasActionableScanBacklog(rescanResult.scan);
+    const aiRequestsContinue = runResult.passStatus === "continue";
+    const shouldContinue = hasActionablePending || (aiRequestsContinue && hasPending);
+
+    if (shouldContinue && options.allowAdaptivePassBudgetGrowth && pass === plannedPasses) {
+      const adaptiveRemainingPasses = deriveAdaptivePassCount(rescanResult.backlog);
+      const adaptiveBudgetFromRemainingBacklog = Math.min(MAX_ADAPTIVE_PASSES, pass + adaptiveRemainingPasses);
+      if (adaptiveBudgetFromRemainingBacklog > plannedPasses) {
+        const previousPlannedPasses = plannedPasses;
+        plannedPasses = adaptiveBudgetFromRemainingBacklog;
+        log.info(
+          `Step 4/4: Adaptive pass budget increased from ${previousPlannedPasses} to ${plannedPasses} based on remaining backlog after pass ${pass}.`
+        );
+      } else if (plannedPasses >= MAX_ADAPTIVE_PASSES && !adaptiveCapWarningLogged) {
+        adaptiveCapWarningLogged = true;
+        log.warn(
+          `Step 4/4: Adaptive pass budget reached safety cap (${MAX_ADAPTIVE_PASSES}) with remaining backlog.`
+        );
+      }
+    }
+
     if (options.onPassCheckpoint) {
       try {
         await options.onPassCheckpoint({
-          nextPass: Math.min(options.plannedPasses, pass + 1),
-          plannedPasses: options.plannedPasses,
+          nextPass: pass + 1,
+          plannedPasses,
           maxFiles,
           scan: rescanResult.scan,
           backlog: rescanResult.backlog
@@ -133,11 +159,6 @@ export async function executeRefactorPassLoop(options: ExecuteRefactorPassLoopOp
         log.warn(`Step 4/4: Could not update resume checkpoint (${message}).`);
       }
     }
-
-    const hasPending = hasPendingBacklog(rescanResult.backlog);
-    const hasActionablePending = hasActionableScanBacklog(rescanResult.scan);
-    const aiRequestsContinue = runResult.passStatus === "continue";
-    const shouldContinue = hasActionablePending || (aiRequestsContinue && hasPending);
     if (!shouldContinue) {
       if (hasPending) {
         log.info("Step 4/4: Remaining backlog is non-actionable (facade/barrel signal); stopping loop.");
@@ -155,9 +176,13 @@ export async function executeRefactorPassLoop(options: ExecuteRefactorPassLoopOp
       };
     }
 
-    if (pass === options.plannedPasses) {
+    if (pass === plannedPasses) {
+      const capHint =
+        options.allowAdaptivePassBudgetGrowth && plannedPasses >= MAX_ADAPTIVE_PASSES
+          ? ` Adaptive continuation reached safety cap (${MAX_ADAPTIVE_PASSES}).`
+          : "";
       throw new Error(
-        `Refactor incomplete after ${options.plannedPasses} passes. Remaining backlog: ${formatBacklogCompact(rescanResult.backlog)}`
+        `Refactor incomplete after ${plannedPasses} passes. Remaining backlog: ${formatBacklogCompact(rescanResult.backlog)}.${capHint}`
       );
     }
 
@@ -179,7 +204,7 @@ export async function executeRefactorPassLoop(options: ExecuteRefactorPassLoopOp
         : hasActionablePending
           ? "backlog remains"
           : "AI requested CONTINUE";
-    log.info(`Step 4/4: Continuing to pass ${pass + 1}/${options.plannedPasses} (${reason}).`);
+    log.info(`Step 4/4: Continuing to pass ${pass + 1}/${plannedPasses} (${reason}).`);
 
     currentState = {
       ...currentState,

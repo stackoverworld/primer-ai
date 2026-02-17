@@ -16,6 +16,7 @@ export interface RefactorCommandOptions {
   showAiFileOps?: boolean;
   orchestration?: boolean;
   maxSubagents?: number | string;
+  format?: string;
   resume?: boolean;
   yes?: boolean;
 }

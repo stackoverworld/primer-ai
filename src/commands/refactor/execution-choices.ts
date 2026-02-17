@@ -191,7 +191,7 @@ export async function resolveExecutionChoices(
         : defaultAgentForProvider(provider);
     const model = provider === "auto" ? undefined : modelFromFlag ?? (provider === "codex" ? DEFAULT_CODEX_MODEL : undefined);
     const orchestration = options.orchestration ?? true;
-    const showAiFileOps = options.showAiFileOps ?? false;
+    const showAiFileOps = options.showAiFileOps ?? true;
     const roleModels = provider === "codex" && orchestration ? resolveRoleModels(options) : {};
 
     if (provider !== "auto" && agentFromFlag && agentFromFlag !== targetAgent) {
@@ -273,12 +273,12 @@ export async function resolveExecutionChoices(
     model = selectedModel;
   }
 
-  let showAiFileOps = options.showAiFileOps ?? false;
-  if (!options.showAiFileOps) {
+  let showAiFileOps = options.showAiFileOps ?? true;
+  if (options.showAiFileOps === undefined) {
     const showOutputSelection = unwrapPrompt<boolean>(
       await confirm({
         message: "Show AI file edit/create logs in console?",
-        initialValue: false
+        initialValue: true
       })
     );
     if (showOutputSelection === null) return null;

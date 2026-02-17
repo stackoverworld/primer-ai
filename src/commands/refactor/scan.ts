@@ -4,8 +4,8 @@ import type { RefactorBacklog } from "./backlog.js";
 
 const DEFAULT_MAX_FILES = 20_000;
 const MAX_MAX_FILES = 120_000;
-const MAX_MAX_PASSES = 80;
-const MAX_ADAPTIVE_PASSES = 12;
+export const MAX_MAX_PASSES = 80;
+export const MAX_ADAPTIVE_PASSES = MAX_MAX_PASSES;
 const AUTO_SCAN_LIMITS = [20_000, 40_000, 80_000, 120_000] as const;
 
 export function normalizeMaxFiles(value: number | string | undefined): number {

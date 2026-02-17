@@ -4,12 +4,21 @@ import { resolve } from "node:path";
 import { log } from "@clack/prompts";
 import { Command } from "commander";
 
+import { runFix } from "./commands/fix.js";
 import { runInit } from "./commands/init.js";
 import { runRefactor } from "./commands/refactor.js";
-import type { InitCommandOptions, RefactorCommandOptions } from "./core/types.js";
+import {
+  normalizeError,
+  normalizeOutputFormat,
+  resolveOutputFormatFromArgv,
+  toJsonErrorPayload,
+  type CliOutputFormat
+} from "./core/errors.js";
+import type { FixCommandOptions, InitCommandOptions, RefactorCommandOptions } from "./core/types.js";
 import packageJson from "../package.json" with { type: "json" };
 
 const program = new Command();
+let outputFormat: CliOutputFormat = resolveOutputFormatFromArgv(process.argv);
 const CLI_VERSION = packageJson.version;
 const RELEASE_CHANNEL = "beta";
 const AUTHOR_HANDLE = "@stackoverworld";
@@ -179,11 +188,36 @@ program
   .option("--git-init", "Run git init if missing", true)
   .option("--no-git-init", "Skip git initialization")
   .option("--quick-setup", "Run AI quick setup for supported stacks (AI-assisted mode only)", false)
+  .option("--format <format>", "text | json output format (errors)", "text")
   .option("-y, --yes", "Use defaults and skip interactive prompts")
-  .option("--force", "Allow scaffolding into a non-empty folder")
+  .option("--force", "Overwrite existing scaffold paths instead of creating .primer-ai.generated variants")
   .action(async (pathArg: string | undefined, rawOptions: InitCommandOptions) => {
+    outputFormat = normalizeOutputFormat(rawOptions.format);
     renderBrandHeader(pathArg);
     await runInit(pathArg, rawOptions);
+  });
+
+program
+  .command("fix")
+  .description("Detect repository verification issues and apply Codex-first AI-assisted fixes.")
+  .argument("[path]", "Target directory (defaults to current working directory)")
+  .option("--provider <provider>", "auto | codex | claude")
+  .option("--model <model>", "Model id to use when provider is codex or claude")
+  .option("--agent <target>", "codex | claude | both")
+  .option("--notes <text>", "Custom notes for AI fix execution")
+  .option("--focus <text>", "Extra fix objective to prioritize")
+  .option("--show-ai-file-ops", "Show AI file edit/create operations in console output", true)
+  .option("--no-show-ai-file-ops", "Hide AI file edit/create operations in console output")
+  .option("--max-files <count>", "Maximum number of source files to scan (optional; defaults auto)")
+  .option("--max-passes <count>", "Maximum AI fix passes before stopping (default: 3, max: 12)")
+  .option("--ai-timeout-sec <seconds>", "Timeout per AI subprocess in seconds (default: 1800)")
+  .option("--dry-run", "Detect actionable issues only; do not execute AI fixes", false)
+  .option("--format <format>", "text | json output format (errors)", "text")
+  .option("-y, --yes", "Skip interactive confirmation prompts")
+  .action(async (pathArg: string | undefined, rawOptions: FixCommandOptions) => {
+    outputFormat = normalizeOutputFormat(rawOptions.format);
+    renderBrandHeader(pathArg);
+    await runFix(pathArg, rawOptions);
   });
 
 program
@@ -198,18 +232,21 @@ program
   .option("--agent <target>", "codex | claude | both")
   .option("--notes <text>", "Custom notes for AI scan calibration and refactor execution")
   .option("--focus <text>", "Extra refactor objective to prioritize")
-  .option("--show-ai-file-ops", "Show AI file edit/create operations in console output", false)
+  .option("--show-ai-file-ops", "Show AI file edit/create operations in console output", true)
+  .option("--no-show-ai-file-ops", "Hide AI file edit/create operations in console output")
   .option("--orchestration", "Use Codex orchestration mode for coordinated subagent execution", true)
   .option("--no-orchestration", "Disable Codex orchestration mode")
   .option("--max-subagents <count>", "Maximum Codex subagents when orchestration is enabled (1-24)")
   .option("--max-files <count>", "Maximum number of source files to scan (optional; defaults auto)")
   .option("--max-passes <count>", "Maximum AI refactor passes before stopping (optional; defaults auto)")
   .option("--ai-timeout-sec <seconds>", "Timeout per AI subprocess in seconds (default: 1800)")
+  .option("--format <format>", "text | json output format (errors)", "text")
   .option("--resume", "Resume interrupted refactor from saved checkpoint when available", true)
   .option("--no-resume", "Start refactor from scratch and ignore saved checkpoint")
   .option("--dry-run", "Generate refactor instructions only; do not execute AI refactor", false)
   .option("-y, --yes", "Skip interactive confirmation prompts")
   .action(async (pathArg: string | undefined, rawOptions: RefactorCommandOptions) => {
+    outputFormat = normalizeOutputFormat(rawOptions.format);
     renderBrandHeader(pathArg);
     await runRefactor(pathArg, rawOptions);
   });
@@ -218,9 +255,13 @@ async function main(): Promise<void> {
   try {
     await program.parseAsync(process.argv);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    log.error(message);
-    process.exitCode = 1;
+    const normalized = normalizeError(error);
+    if (outputFormat === "json") {
+      console.error(`${JSON.stringify(toJsonErrorPayload(normalized), null, 2)}\n`);
+    } else {
+      log.error(normalized.message);
+    }
+    process.exitCode = normalized.exitCode;
   }
 }
 

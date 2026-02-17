@@ -15,6 +15,7 @@ export interface InitArtifactsResult {
 interface PrepareInitArtifactsOptions {
   targetDir: string;
   input: InitInput;
+  force: boolean;
   plan: ProjectPlan;
   draft: AIDraft | null;
   providerUsed?: Exclude<AiProvider, "auto">;
@@ -42,10 +43,12 @@ export function prepareInitArtifacts(options: PrepareInitArtifactsOptions): Init
     const merged = mergeReadmeArtifact(options.targetDir, filesToWrite);
     filesToWrite = merged.files;
     mergedReadme = merged.merged;
-    const allowOverwritePaths = mergedReadme ? new Set<string>(["README.md"]) : new Set<string>();
-    const remapped = remapConflictingFiles(options.targetDir, filesToWrite, allowOverwritePaths);
-    filesToWrite = remapped.files;
-    collisions = remapped.collisions;
+    if (!options.force) {
+      const allowOverwritePaths = mergedReadme ? new Set<string>(["README.md"]) : new Set<string>();
+      const remapped = remapConflictingFiles(options.targetDir, filesToWrite, allowOverwritePaths);
+      filesToWrite = remapped.files;
+      collisions = remapped.collisions;
+    }
   }
 
   return { generatedFiles, filesToWrite, collisions, mergedReadme };

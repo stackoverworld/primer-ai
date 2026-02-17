@@ -30,10 +30,7 @@ export async function calibrateInitialBacklog(options: CalibrateInitialBacklogOp
       targetAgent: options.targetAgent,
       ...(options.model ? { model: options.model } : {}),
       ...(options.notes ? { notes: options.notes } : {}),
-      aiTimeoutMs: options.aiTimeoutMs,
-      onStatus(message) {
-        calibrationSpinner.message(`Step 2/4: ${message}`);
-      }
+      aiTimeoutMs: options.aiTimeoutMs
     });
     calibrationSpinner.stop("Step 2/4: AI scan calibration complete.");
     if (calibrated.warning) {

@@ -27,7 +27,7 @@
 - `docs/runbooks/local-dev.md`: environment setup and local operation guide.
 - `skills/**/SKILL.md`: reusable task playbooks loaded only when relevant.
 - `src/commands/AGENTS.md`: Command UX, validation, and error ergonomics. (applies inside `src/commands/`).
-- `src/lib/AGENTS.md`: Core orchestration and side-effect boundaries. (applies inside `src/lib/`).
+- `src/core/AGENTS.md`: Core orchestration and side-effect boundaries. (applies inside `src/core/`).
 - `tests/AGENTS.md`: End-to-end command scenarios and edge cases. (applies inside `tests/`).
 
 ## Harness Adapters
@@ -48,15 +48,15 @@
 | `docs/skills.md` | Skill curation and trigger discipline. |
 | `.agents/fragments/root` | Composable fragments used to build AGENTS.md. |
 | `src/commands` | Command definitions and argument parsing. |
-| `src/lib` | Shared services used by commands. |
+| `src/core` | Shared orchestration, AI/runtime adapters, and template logic used by commands. |
 | `tests` | CLI behavior validation. |
 | `scripts` | Automation helpers. |
 
 ## Architecture Snapshot
-- Use a thin-command/thick-library split: `src/commands` parses flags and delegates all behavior to `src/lib`.
+- Use a thin-command/thick-core split: `src/commands` parses flags and delegates behavior to `src/core` and focused command helpers.
 - Define strict contracts for config, execution plans, and reports so Codex can compose workflows without reading internal modules.
 - Prefer deterministic execution: explicit inputs, stable ordering, no hidden environment dependencies, and machine-readable outputs.
-- Model work as a task graph with typed steps, allowing dry-run, explain, and execute modes from the same core API.
+- Treat task-graph/reporting runtime APIs as planned; current shipped surface is `init`, `refactor`, and `fix`.
 - Keep docs progressively disclosed: short overview first, then command/module-specific deep dives linked from it.
 - Store architecture decisions as ADRs in `docs/decisions` and operational steps as narrowly scoped runbooks in `docs/runbooks`.
 - Treat verification as a product feature: lint/test/build plus contract tests for CLI JSON output and exit codes.

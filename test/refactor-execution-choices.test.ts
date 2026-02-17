@@ -75,7 +75,7 @@ describe("resolveExecutionChoices", () => {
       plannerModel: "gpt-5.3-codex",
       orchestratorModel: "gpt-5.3-codex",
       workerModel: "gpt-5.3-codex-spark",
-      showAiFileOps: false,
+      showAiFileOps: true,
       orchestration: true,
       maxSubagents: 12,
       proceed: true
@@ -99,7 +99,7 @@ describe("resolveExecutionChoices", () => {
     expect(result).toMatchObject({
       provider: "auto",
       targetAgent: "codex",
-      showAiFileOps: false,
+      showAiFileOps: true,
       orchestration: true,
       maxSubagents: 12,
       proceed: true

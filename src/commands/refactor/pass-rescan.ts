@@ -59,10 +59,7 @@ export async function rescanAfterPass(options: RescanAfterPassOptions): Promise<
       targetAgent: options.targetAgent,
       ...(options.model ? { model: options.model } : {}),
       ...(options.notes ? { notes: options.notes } : {}),
-      aiTimeoutMs: options.aiTimeoutMs,
-      onStatus(message) {
-        calibrationSpinner.message(`Step 4/4: ${message}`);
-      }
+      aiTimeoutMs: options.aiTimeoutMs
     });
     calibrationSpinner.stop(`Step 4/4: AI scan calibration complete after pass ${options.pass}/${options.totalPasses}.`);
     if (calibrated.warning) {

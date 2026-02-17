@@ -7,6 +7,7 @@ import { startLiveStatus } from "./status.js";
 export interface AiExecutionOptions {
   cwd?: string;
   onStatus?: (message: string) => void;
+  aiTimeoutMs?: number;
   existingContext?: string[];
 }
 

@@ -6,12 +6,12 @@ Deliver a TypeScript/Node.js CLI that is predictable for agents, easy to evolve,
 - Last reviewed: 2026-02-16
 
 ## Structural Principles
-- Use a thin-command/thick-library split: `src/commands` parses flags and delegates all behavior to `src/lib`.
+- Use a thin-command/thick-core split: `src/commands` parses flags and delegates behavior to `src/core` and command-local helpers.
 - Keep Codex as the default execution path while preserving optional Claude compatibility.
 - Use a deterministic orchestration runtime for Codex refactor execution (planner -> orchestrator -> worker roles) instead of pure prompt-only coordination.
 - Define strict contracts for config, execution plans, and reports so Codex can compose workflows without reading internal modules.
 - Prefer deterministic execution: explicit inputs, stable ordering, no hidden environment dependencies, and machine-readable outputs.
-- Model work as a task graph with typed steps, allowing dry-run, explain, and execute modes from the same core API.
+- Keep task-graph execution/reporting APIs as planned work; current runtime focuses on `init`, `refactor`, and `fix` command contracts.
 - Treat refactor progress as a contract: adaptive pass budgets, actionable status text, and no hardcoded pass denominators.
 - Persist refactor checkpoints so interrupted runs can resume from the last completed pass rather than restarting pass 1.
 - Keep docs progressively disclosed: short overview first, then command/module-specific deep dives linked from it.
@@ -21,12 +21,14 @@ Deliver a TypeScript/Node.js CLI that is predictable for agents, easy to evolve,
 ## Initial Module Plan
 | Module Path | Responsibility |
 | --- | --- |
-| `src/commands/index.ts` | Register CLI commands, route argv to handlers, and standardize process exit behavior. |
+| `src/cli.ts` | Register CLI commands, render banner, and map typed errors to exit behavior. |
 | `src/commands/init.ts` | Command orchestration for project initialization and scaffold writing. |
 | `src/commands/init/*.ts` | Init-command helpers split by existing-context import, README merge behavior, and conflict-safe file remapping. |
 | `src/commands/refactor.ts` | Command handler for AI-guided repository refactor execution and dry-run analysis. |
 | `src/commands/refactor/*.ts` | Internal refactor-command helpers split by scan limits, execution-choice prompts, adaptive pass budgeting, heuristic+AI scan calibration, backlog analysis, and status rendering. |
 | `src/commands/refactor/resume.ts` | Checkpoint persistence for resumable refactor runs (`.primer-ai/refactor-resume.json`). |
+| `src/commands/fix.ts` | Verification-driven AI fix loop that detects actionable failures and applies iterative repair passes. |
+| `src/commands/fix/*.ts` | Fix-command helpers split by prompt composition, execution choices, workflow setup, and verification command orchestration. |
 | `src/core/refactor.ts` | Stable public facade that re-exports refactor scan/prompt/execution APIs. |
 | `src/core/refactor/contracts.ts` | Shared refactor contracts consumed across scan, prompt, and execution modules. |
 | `src/core/refactor/scan.ts` | Deterministic source scanning, hotspot scoring, and repository refactor analysis output. |
@@ -52,21 +54,14 @@ Deliver a TypeScript/Node.js CLI that is predictable for agents, easy to evolve,
 | `src/core/quick-setup/*.ts` | Internal quick-setup modules split by support detection, package inspection, command planning, process execution, and script updates. |
 | `src/core/templates.ts` | Scaffold composition entrypoint that assembles docs/scripts/rules from focused template builders. |
 | `src/core/templates/*.ts` | Focused template builders for assistant adapters, automation scripts/workflows, and skills content. |
+| `src/core/errors.ts` | Typed error classes and deterministic exit-code mapping helpers. |
 | `src/core/types.ts` | Stable type barrel preserving existing import paths across commands/core modules. |
 | `src/core/types/*.ts` | Domain-focused type declarations split by init, refactor, plan, AI draft, and quick-setup contracts. |
-| `src/commands/run.ts` | Execute a planned workflow from config/task input and emit structured run reports. |
-| `src/commands/check.ts` | Run deterministic preflight checks (config, filesystem, toolchain) without side effects. |
-| `src/commands/doctor.ts` | Diagnose environment issues and return actionable, machine-readable remediation hints. |
-| `src/lib/contracts.ts` | Source of truth for core types: `PrimerConfig`, `TaskSpec`, `TaskGraph`, `RunReport`, `CheckReport`. |
-| `src/lib/config.ts` | Load, validate, and merge config from file/env/flags with explicit precedence rules. |
-| `src/lib/taskGraph.ts` | Build and topologically sort executable task graphs with cycle detection and stable ordering. |
-| `src/lib/executor.ts` | Run tasks with timeout/retry policies, deterministic logging, and typed error mapping. |
-| `src/lib/reporting.ts` | Render reports as `text` or `json` with stable field order for agent parsing. |
-| `tests/cli.contract.test.ts` | Assert command exit codes, stdout/stderr contracts, and JSON schema stability. |
-| `tests/lib/taskGraph.test.ts` | Verify graph build/sort/cycle behaviors with deterministic fixtures. |
-| `scripts/ci-verify.sh` | Single reproducible CI entrypoint running lint, tests, and build in strict mode. |
-| `docs/decisions/0001-core-architecture.md` | ADR documenting command-library split, contracts-first design, and tradeoffs. |
-| `docs/runbooks/local-dev.md` | Minimal local setup, verification flow, and failure triage steps. |
+| `test/*.test.ts` | Command and module contract coverage, including AI execution, parsing, and workflow behavior. |
+
+## Planned Modules (Not Yet Shipped)
+- `src/commands/run.ts`, `src/commands/check.ts`, `src/commands/doctor.ts`.
+- `src/lib/*` task-graph/config/reporting runtime.
 
 ## Dependency Direction
 - Domain and business logic should not depend on delivery frameworks.

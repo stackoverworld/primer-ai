@@ -4,7 +4,7 @@ import type { RefactorCommandOptions } from "../core/types.js";
 import { resolveExecutionChoices } from "./refactor/execution-choices.js";
 import { hasActionableScanBacklog } from "./refactor/backlog.js";
 import { captureSourceFileSnapshot, summarizeAiVerificationSignals, summarizeSourceDiff } from "./refactor/change-report.js";
-import { deriveAdaptivePassCount } from "./refactor/scan.js";
+import { deriveAdaptivePassCount, MAX_ADAPTIVE_PASSES } from "./refactor/scan.js";
 import {
   clearRefactorResumeCheckpoint,
   loadRefactorResumeCheckpoint,
@@ -114,6 +114,20 @@ export async function runRefactor(pathArg: string | undefined, options: Refactor
     plannedPasses = workflow.explicitMaxPasses ? (workflow.maxPasses ?? 1) : resumeCheckpoint.plannedPasses;
 
     if (startPass > plannedPasses) {
+      if (!workflow.explicitMaxPasses && hasActionableScanBacklog(currentState.scan)) {
+        const adaptiveRemainingPasses = deriveAdaptivePassCount(currentState.backlog);
+        const extensionBasePass = Math.max(plannedPasses, startPass - 1);
+        const extendedPlannedPasses = Math.min(MAX_ADAPTIVE_PASSES, extensionBasePass + adaptiveRemainingPasses);
+        if (extendedPlannedPasses > plannedPasses) {
+          plannedPasses = extendedPlannedPasses;
+          log.info(
+            `Step 2/4: Extended adaptive pass budget from checkpoint to ${plannedPasses} based on remaining backlog.`
+          );
+        }
+      }
+    }
+
+    if (startPass > plannedPasses) {
       throw new Error(
         `Saved checkpoint expects pass ${startPass}, but current pass budget is ${plannedPasses}. Increase --max-passes or rerun with --no-resume.`
       );
@@ -203,6 +217,7 @@ export async function runRefactor(pathArg: string | undefined, options: Refactor
     showAiFileOps: selected.showAiFileOps,
     orchestration: selected.orchestration,
     maxSubagents: selected.maxSubagents,
+    allowAdaptivePassBudgetGrowth: !workflow.explicitMaxPasses,
     ...(workflow.resume
       ? {
           onPassCheckpoint: async (checkpoint: {

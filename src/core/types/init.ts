@@ -26,6 +26,7 @@ export interface InitCommandOptions {
   cursor?: boolean;
   gitInit?: boolean;
   quickSetup?: boolean;
+  format?: string;
   yes?: boolean;
   force?: boolean;
 }

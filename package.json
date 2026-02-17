@@ -1,6 +1,6 @@
 {
   "name": "primer-ai",
-  "version": "0.1.59",
+  "version": "0.1.79",
   "description": "Beta CLI that scaffolds AI-optimized project architecture for Codex and Claude Code.",
   "type": "module",
   "bin": {

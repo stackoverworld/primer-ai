@@ -1,4 +1,4 @@
-import { spinner } from "@clack/prompts";
+import { log, spinner } from "@clack/prompts";
 
 import { runRefactorPrompt } from "../../core/refactor.js";
 import type { AgentTarget, AiProvider } from "../../core/types.js";
@@ -31,9 +31,15 @@ export interface RunRefactorPassResult {
 
 export async function runRefactorPass(options: RunRefactorPassOptions): Promise<RunRefactorPassResult> {
   const passStart = Date.now();
-  const refactorSpinner = spinner({ indicator: "dots" });
-  refactorSpinner.start(`Step 3/4: Running AI pass ${options.pass}/${options.totalPasses}...`);
+  const streamAiFileOps = options.showAiFileOps;
+  const refactorSpinner = streamAiFileOps ? null : spinner({ indicator: "dots" });
+  if (refactorSpinner) {
+    refactorSpinner.start(`Step 3/4: Running AI pass ${options.pass}/${options.totalPasses}...`);
+  } else {
+    log.info(`Step 3/4: Pass ${options.pass}/${options.totalPasses} - Applying refactor updates...`);
+  }
   let lastExecutionPhase = "";
+  let lastNonWaitingStatusAt = Date.now();
 
   const runResult = await runRefactorPrompt({
     targetDir: options.targetDir,
@@ -50,9 +56,22 @@ export async function runRefactorPass(options: RunRefactorPassOptions): Promise<
     aiTimeoutMs: options.aiTimeoutMs,
     onStatus(message) {
       const phase = simplifyExecutionStatus(message);
+      if (phase === "Waiting for AI response" && lastExecutionPhase && lastExecutionPhase !== phase) {
+        const quietForMs = Date.now() - lastNonWaitingStatusAt;
+        if (quietForMs < 15_000) {
+          return;
+        }
+      }
       if (phase !== lastExecutionPhase) {
         lastExecutionPhase = phase;
-        refactorSpinner.message(`Step 3/4: Pass ${options.pass}/${options.totalPasses} - ${phase}`);
+        if (phase !== "Waiting for AI response") {
+          lastNonWaitingStatusAt = Date.now();
+        }
+        if (refactorSpinner) {
+          refactorSpinner.message(`Step 3/4: Pass ${options.pass}/${options.totalPasses} - ${phase}`);
+        } else {
+          log.info(`Step 3/4: Pass ${options.pass}/${options.totalPasses} - ${phase}`);
+        }
       }
     }
   });
@@ -62,11 +81,19 @@ export async function runRefactorPass(options: RunRefactorPassOptions): Promise<
   const passDurationSuffix = `(${passElapsedSeconds}s elapsed)`;
 
   if (!runResult.executed) {
-    refactorSpinner.stop(`Step 3/4: Pass ${options.pass}/${options.totalPasses} did not complete ${passDurationSuffix}.`);
+    if (refactorSpinner) {
+      refactorSpinner.stop(`Step 3/4: Pass ${options.pass}/${options.totalPasses} did not complete ${passDurationSuffix}.`);
+    } else {
+      log.error(`Step 3/4: Pass ${options.pass}/${options.totalPasses} did not complete ${passDurationSuffix}.`);
+    }
     throw new Error(runResult.warning ?? "AI refactor execution failed.");
   }
 
-  refactorSpinner.stop(`Step 3/4: Pass ${options.pass}/${options.totalPasses} completed ${passDurationSuffix}.`);
+  if (refactorSpinner) {
+    refactorSpinner.stop(`Step 3/4: Pass ${options.pass}/${options.totalPasses} completed ${passDurationSuffix}.`);
+  } else {
+    log.success(`Step 3/4: Pass ${options.pass}/${options.totalPasses} completed ${passDurationSuffix}.`);
+  }
   return {
     passStatus: runResult.passStatus ?? "unknown",
     outputTail: runResult.outputTail,

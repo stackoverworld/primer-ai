@@ -24,6 +24,7 @@ This folder is the source of truth for architecture and delivery guidance.
 - `decisions/0002-ai-module-boundaries.md`
 - `decisions/0003-codex-first-orchestration-and-adaptive-pass-budget.md`
 - `decisions/0004-hard-orchestration-runtime-and-role-models.md`
+- `decisions/0005-fix-command-verification-remediation-loop.md`
 - `runbooks/local-dev.md`
 <!-- primer-ai:docs-index:end -->
 
