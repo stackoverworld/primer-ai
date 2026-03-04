@@ -17,6 +17,7 @@ import {
 import { buildAgentsFragmentsReadme, buildRootAgents, buildScopedAgents, splitRootIntoFragments } from "./templates/agents.js";
 import {
   buildAgentContextWorkflow,
+  buildCiWorkflow,
   buildCheckAgentContextScript,
   buildCheckDocFreshnessScript,
   buildCheckSkillsScript,
@@ -71,6 +72,14 @@ export function createScaffoldFiles(
   files.push({ path: "docs/skills.md", content: buildSkillsDoc(input, plan) });
   files.push({ path: "docs/decisions/0001-initial-architecture.md", content: buildInitialAdr(input, plan) });
   files.push({ path: "docs/runbooks/local-dev.md", content: buildRunbook(plan) });
+  files.push({
+    path: ".github/workflows/ci.yml",
+    content: buildCiWorkflow({
+      verificationCommands: plan.verificationCommands,
+      includePackageSmokeTest: input.projectShape === "cli-tool",
+      useNpmCheckShortcut: false
+    })
+  });
   files.push({ path: ".github/workflows/agent-context-checks.yml", content: buildAgentContextWorkflow() });
   files.push({ path: ".github/workflows/doc-gardening.yml", content: buildDocGardeningWorkflow() });
 

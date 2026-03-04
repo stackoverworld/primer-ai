@@ -1,6 +1,8 @@
 export type {
   AgentTarget,
   AiProvider,
+  ClaudeEffort,
+  CodexReasoningEffort,
   GenerationMode,
   NodeRuntimeProfile,
   ProjectShape,

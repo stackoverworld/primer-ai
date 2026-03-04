@@ -3,7 +3,7 @@
 ## Intent
 Deliver a TypeScript/Node.js CLI that is predictable for agents, easy to evolve, and reproducible from local dev through CI.
 
-- Last reviewed: 2026-02-16
+- Last reviewed: 2026-02-19
 
 ## Structural Principles
 - Use a thin-command/thick-core split: `src/commands` parses flags and delegates behavior to `src/core` and command-local helpers.

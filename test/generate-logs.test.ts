@@ -113,6 +113,68 @@ describe("runGenerateLogs (AI mode)", () => {
     expect(mocks.runAiFreeformTask).toHaveBeenCalledTimes(1);
   });
 
+  it("appends --thanks handle to each generated entry", async () => {
+    mocks.runAiFreeformTask.mockResolvedValue({
+      ok: true,
+      output: JSON.stringify({
+        changes: ["CLI: add AI-based release log generation Thanks @old."],
+        fixes: ["Validation: improve release range checks."]
+      })
+    });
+
+    const { root, remote } = createRepo("primer-ai-generate-logs-thanks");
+    tempRoots.push(root, remote);
+
+    writeFileSync(join(root, "README.md"), "# baseline\n", "utf8");
+    runGit(root, ["add", "README.md"]);
+    runGit(root, ["commit", "-m", "chore: baseline"]);
+    runGit(root, ["tag", "v0.1.0"]);
+
+    writeFileSync(join(root, "CHANGE.txt"), "new changes\n", "utf8");
+    runGit(root, ["add", "CHANGE.txt"]);
+    runGit(root, ["commit", "-m", "feat: add release log input"]);
+
+    pushHeadAndTags(root);
+
+    const { runGenerateLogs } = await import("../src/commands/generate-logs.js");
+    await runGenerateLogs(root, {
+      output: "RELEASE_LOG.md",
+      thanks: "@stackoverworld"
+    });
+
+    const generated = readFileSync(join(root, "RELEASE_LOG.md"), "utf8");
+    expect(generated).toContain("CLI: add AI-based release log generation. Thanks @stackoverworld.");
+    expect(generated).toContain("Validation: improve release range checks. Thanks @stackoverworld.");
+    expect(generated).not.toContain("Thanks @old");
+  });
+
+  it("fails when --thanks handle is invalid", async () => {
+    mocks.runAiFreeformTask.mockResolvedValue({
+      ok: true,
+      output: JSON.stringify({
+        changes: ["CLI: add AI-based release log generation."],
+        fixes: []
+      })
+    });
+
+    const { root, remote } = createRepo("primer-ai-generate-logs-invalid-thanks");
+    tempRoots.push(root, remote);
+
+    writeFileSync(join(root, "README.md"), "# baseline\n", "utf8");
+    runGit(root, ["add", "README.md"]);
+    runGit(root, ["commit", "-m", "chore: baseline"]);
+    runGit(root, ["tag", "v0.1.0"]);
+    pushHeadAndTags(root);
+
+    const { runGenerateLogs } = await import("../src/commands/generate-logs.js");
+    await expect(
+      runGenerateLogs(root, {
+        output: "RELEASE_LOG.md",
+        thanks: "invalid handle"
+      })
+    ).rejects.toThrow("Invalid --thanks value");
+  });
+
   it("supports strict version-to-version generation from GitHub tags", async () => {
     mocks.runAiFreeformTask.mockResolvedValue({
       ok: true,

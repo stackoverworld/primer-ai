@@ -22,6 +22,15 @@ export function assessQuickSetupSupport(techStack: string, projectShape: Project
   const stack = techStack.toLowerCase();
   const isWeb = projectShape === "web-app";
   const hasTypescript = stack.includes("typescript") || stack.includes("ts");
+  const hasSwift = includesAny(stack, ["swift"]);
+  const hasXcodeOrIos = includesAny(stack, ["xcode", "ios"]);
+
+  if (projectShape === "monorepo") {
+    return {
+      supported: false,
+      reason: "Monorepo quick setup is not enabled yet. Use per-package setup after scaffold."
+    };
+  }
 
   if (isWeb && hasTypescript && stack.includes("next")) {
     return {
@@ -54,17 +63,26 @@ export function assessQuickSetupSupport(techStack: string, projectShape: Project
     };
   }
 
-  if (includesAny(stack, ["swift", "xcode", "ios"])) {
+  if (hasSwift && hasXcodeOrIos) {
     return {
       supported: false,
       reason: "Swift/iOS flow requires Xcode project generation, which is outside quick CLI setup scope."
     };
   }
 
-  if (projectShape === "monorepo") {
+  if (hasSwift && ["api-service", "cli-tool", "library", "custom"].includes(projectShape)) {
+    return {
+      supported: true,
+      preset: "swift-spm",
+      label: "Swift + SwiftPM",
+      reason: "Supported Swift package preset."
+    };
+  }
+
+  if (hasSwift) {
     return {
       supported: false,
-      reason: "Monorepo quick setup is not enabled yet. Use per-package setup after scaffold."
+      reason: "Swift quick setup is currently available only for api-service, cli-tool, library, and custom shapes."
     };
   }
 

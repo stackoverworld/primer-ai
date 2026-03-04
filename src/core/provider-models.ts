@@ -18,6 +18,19 @@ const ENV_MODEL_KEYS: Record<FixedProvider, string[]> = {
   claude: ["CLAUDE_MODEL", "ANTHROPIC_MODEL"]
 };
 
+const KNOWN_PROVIDER_MODELS: Record<FixedProvider, string[]> = {
+  codex: [
+    "gpt-5.3-codex",
+    "gpt-5.3-codex-spark",
+    "gpt-5.2-codex",
+    "gpt-5.1-codex-max",
+    "gpt-5.1-codex",
+    "gpt-5.1-codex-mini",
+    "gpt-5-codex"
+  ],
+  claude: []
+};
+
 function normalizeCandidate(value: string): string | null {
   const trimmed = value.trim();
   if (!trimmed) return null;
@@ -132,5 +145,6 @@ export function discoverProviderModels(
 
   appendModels(models, seen, collectConfigModels(provider, cwd, home));
   appendModels(models, seen, collectEnvironmentModels(provider));
+  appendModels(models, seen, KNOWN_PROVIDER_MODELS[provider]);
   return models;
 }

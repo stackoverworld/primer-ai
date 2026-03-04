@@ -5,4 +5,4 @@ export {
   buildComposeAgentsScript,
   buildDocGardenScript
 } from "./automation/scripts.js";
-export { buildAgentContextWorkflow, buildDocGardeningWorkflow } from "./automation/workflows.js";
+export { buildAgentContextWorkflow, buildCiWorkflow, buildDocGardeningWorkflow } from "./automation/workflows.js";

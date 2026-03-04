@@ -11,12 +11,22 @@ function createFixture(prefix: string): string {
 }
 
 const originalOpenAiModel = process.env.OPENAI_MODEL;
+const originalCodexModel = process.env.CODEX_MODEL;
 const originalAnthropicModel = process.env.ANTHROPIC_MODEL;
+
+function restoreEnvVar(key: string, value: string | undefined): void {
+  if (value === undefined) {
+    delete process.env[key];
+    return;
+  }
+  process.env[key] = value;
+}
 
 describe("provider model discovery", () => {
   afterEach(() => {
-    process.env.OPENAI_MODEL = originalOpenAiModel;
-    process.env.ANTHROPIC_MODEL = originalAnthropicModel;
+    restoreEnvVar("OPENAI_MODEL", originalOpenAiModel);
+    restoreEnvVar("CODEX_MODEL", originalCodexModel);
+    restoreEnvVar("ANTHROPIC_MODEL", originalAnthropicModel);
   });
 
   it("collects codex models from project/home config and env", () => {
@@ -43,7 +53,44 @@ describe("provider model discovery", () => {
         cwd,
         homeDir: home
       });
-      expect(models).toEqual(["gpt-5", "o3", "o4-mini", "gpt-4.1"]);
+      expect(models).toEqual([
+        "gpt-5",
+        "o3",
+        "o4-mini",
+        "gpt-4.1",
+        "gpt-5.3-codex",
+        "gpt-5.3-codex-spark",
+        "gpt-5.2-codex",
+        "gpt-5.1-codex-max",
+        "gpt-5.1-codex",
+        "gpt-5.1-codex-mini",
+        "gpt-5-codex"
+      ]);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  it("includes known codex models and de-duplicates case-insensitively", () => {
+    const cwd = createFixture("primer-ai-model-codex-known-cwd-");
+    const home = createFixture("primer-ai-model-codex-known-home-");
+    process.env.CODEX_MODEL = "GPT-5.2-CODEX";
+
+    try {
+      const models = discoverProviderModels("codex", {
+        cwd,
+        homeDir: home
+      });
+      expect(models).toEqual([
+        "GPT-5.2-CODEX",
+        "gpt-5.3-codex",
+        "gpt-5.3-codex-spark",
+        "gpt-5.1-codex-max",
+        "gpt-5.1-codex",
+        "gpt-5.1-codex-mini",
+        "gpt-5-codex"
+      ]);
     } finally {
       rmSync(cwd, { recursive: true, force: true });
       rmSync(home, { recursive: true, force: true });

@@ -200,7 +200,22 @@ async function detectSwiftStack(targetPath: string): Promise<StackDetection | nu
   const xcodeprojDirs = await findDirectories(targetPath, (name) => name.endsWith(".xcodeproj"), 3, 8);
 
   if (packageSwiftFiles.length === 0 && xcodeprojDirs.length === 0) return null;
-  return { stack: "Swift + iOS + Xcode", source: "Xcode/Swift project files" };
+  if (xcodeprojDirs.length > 0) {
+    return { stack: "Swift + iOS + Xcode", source: "Xcode project files" };
+  }
+
+  const combined = (
+    await Promise.all(packageSwiftFiles.map((filePath) => safeReadFile(filePath)))
+  )
+    .filter((value): value is string => Boolean(value))
+    .join("\n")
+    .toLowerCase();
+
+  if (combined.includes("vapor")) {
+    return { stack: "Swift + Vapor", source: "Package.swift" };
+  }
+
+  return { stack: "Swift + SPM", source: "Package.swift" };
 }
 
 export const STACK_DETECTORS: readonly StackDetector[] = [

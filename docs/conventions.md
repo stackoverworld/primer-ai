@@ -1,6 +1,6 @@
 # Conventions
 
-- Last reviewed: 2026-02-14
+- Last reviewed: 2026-02-18
 
 ## Coding
 - Command modules expose focused runners invoked from `src/cli.ts`; CLI wiring stays centralized.
@@ -17,8 +17,10 @@
 - Start from a short plan, then implement minimal viable changes.
 - Keep commits scoped and reversible.
 - Validate locally before asking for review.
+- Prefer a single project-level check entrypoint (`check` script/command) that CI and developers both use.
 
 ## Verification
+- `npm run check`
 - `node scripts/check-agent-context.mjs`
 - `node scripts/check-doc-freshness.mjs`
 - `node scripts/check-skills.mjs`

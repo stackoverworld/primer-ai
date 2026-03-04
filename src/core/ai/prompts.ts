@@ -50,7 +50,9 @@ export function buildQuickSetupPrompt(input: InitInput, preset: QuickSetupPreset
       ? "Next.js + TypeScript web app"
       : preset === "vite-react-ts"
         ? "React + TypeScript + Vite web app"
-        : "TypeScript + Node.js runtime/app";
+        : preset === "swift-spm"
+          ? "Swift + Swift Package Manager (library/cli/server)"
+          : "TypeScript + Node.js runtime/app";
 
   const lines = [
     "You are generating a SAFE quick setup policy for project bootstrap.",

@@ -6,6 +6,7 @@ const POPULAR_STACKS = [
   "Python + Django",
   "Go + Gin",
   "Rust + Axum",
+  "Swift + SPM",
   "Java + Spring Boot",
   "C# + ASP.NET Core",
   "Flutter + Dart"

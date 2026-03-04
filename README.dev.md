@@ -23,11 +23,7 @@ npm install
 Run project checks before commit:
 
 ```bash
-node scripts/check-agent-context.mjs
-node scripts/check-doc-freshness.mjs
-node scripts/check-skills.mjs
-npm run lint
-npm run test
+npm run check
 ```
 
 ## Build

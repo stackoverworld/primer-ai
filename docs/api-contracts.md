@@ -1,6 +1,6 @@
 # API Contracts
 
-- Last reviewed: 2026-02-16
+- Last reviewed: 2026-02-19
 
 ## Contract-First Policy
 - Define or update contracts before implementing integration behavior.

@@ -9,13 +9,15 @@ vi.mock("../src/core/ai/process-runner.js", () => ({
 }));
 
 describe("ai provider command wiring", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     mocks.runCommand.mockReset();
     mocks.runCommand.mockResolvedValue({
       ok: true,
       stdout: "ok",
       stderr: ""
     });
+    const providers = await import("../src/core/ai/providers.js");
+    providers.resetClaudeCliCapabilityCacheForTests();
   });
 
   afterEach(() => {
@@ -69,6 +71,31 @@ describe("ai provider command wiring", () => {
     expect(codexArgs?.includes("agents.max_threads=12")).toBe(false);
   });
 
+  it("honors explicit codex reasoning effort override", async () => {
+    const { runFreeformTask } = await import("../src/core/ai/providers.js");
+
+    await runFreeformTask("codex", "refactor now", {
+      reasoningEffort: "medium"
+    });
+
+    expect(mocks.runCommand).toHaveBeenCalledWith(
+      "codex",
+      [
+        "exec",
+        "--sandbox",
+        "workspace-write",
+        "--skip-git-repo-check",
+        "-c",
+        'model_reasoning_effort="medium"',
+        "refactor now"
+      ],
+      {
+        cwd: undefined,
+        inheritOutput: false
+      }
+    );
+  });
+
   it("keeps claude output streaming disabled by default", async () => {
     const { runFreeformTask } = await import("../src/core/ai/providers.js");
 
@@ -78,7 +105,39 @@ describe("ai provider command wiring", () => {
 
     expect(mocks.runCommand).toHaveBeenCalledWith(
       "claude",
-      ["-p", "refactor now", "--no-session-persistence"],
+      ["-p", "refactor now", "--tools", "", "--no-session-persistence"],
+      {
+        cwd: undefined,
+        inheritOutput: false
+      }
+    );
+  });
+
+  it("passes claude effort and fast mode settings when requested", async () => {
+    const { runFreeformTask } = await import("../src/core/ai/providers.js");
+
+    await runFreeformTask("claude", "refactor now", {
+      model: "claude-opus-4-6",
+      claudeEffort: "low",
+      claudeFastMode: true,
+      showAiFileOps: false
+    });
+
+    expect(mocks.runCommand).toHaveBeenCalledWith(
+      "claude",
+      [
+        "-p",
+        "refactor now",
+        "--tools",
+        "",
+        "--no-session-persistence",
+        "--model",
+        "claude-opus-4-6",
+        "--effort",
+        "low",
+        "--settings",
+        "{\"fastMode\":true}"
+      ],
       {
         cwd: undefined,
         inheritOutput: false
@@ -186,6 +245,67 @@ describe("ai provider command wiring", () => {
     );
     expect(mocks.runCommand).toHaveBeenNthCalledWith(
       2,
+      "claude",
+      ["-p", "refactor now", "--tools", ""],
+      expect.objectContaining({
+        cwd: undefined,
+        inheritOutput: false,
+        onActivity: expect.any(Function)
+      })
+    );
+  });
+
+  it("does not retry claude invocation when failure is not an unsupported option error", async () => {
+    const { runFreeformTask } = await import("../src/core/ai/providers.js");
+    const onStatus = vi.fn();
+
+    mocks.runCommand.mockResolvedValueOnce({
+      ok: false,
+      stdout: "",
+      stderr: "temporary upstream overload",
+      reason: "exit code 1"
+    });
+
+    const result = await runFreeformTask("claude", "refactor now", {
+      onStatus
+    });
+
+    expect(result.ok).toBe(false);
+    expect(mocks.runCommand).toHaveBeenCalledTimes(1);
+    expect(onStatus).not.toHaveBeenCalledWith(expect.stringContaining("retry will run without --no-session-persistence"));
+    expect(onStatus).not.toHaveBeenCalledWith(expect.stringContaining("retry will run without --tools"));
+  });
+
+  it("falls back to plain claude when --tools is rejected", async () => {
+    const { runFreeformTask } = await import("../src/core/ai/providers.js");
+    const onStatus = vi.fn();
+
+    mocks.runCommand
+      .mockResolvedValueOnce({
+        ok: false,
+        stdout: "",
+        stderr: "unknown option --no-session-persistence",
+        reason: "exit code 1"
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        stdout: "",
+        stderr: "unknown option --tools",
+        reason: "exit code 1"
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        stdout: "ok",
+        stderr: ""
+      });
+
+    await runFreeformTask("claude", "refactor now", {
+      onStatus
+    });
+
+    expect(onStatus).toHaveBeenCalledWith(expect.stringContaining("without --tools"));
+    expect(mocks.runCommand).toHaveBeenNthCalledWith(
+      3,
       "claude",
       ["-p", "refactor now"],
       expect.objectContaining({

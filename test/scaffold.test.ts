@@ -94,6 +94,7 @@ describe("scaffold generation", () => {
 
     expect(paths.has("docs/maintenance.md")).toBe(true);
     expect(paths.has("docs/skills.md")).toBe(true);
+    expect(paths.has(".github/workflows/ci.yml")).toBe(true);
     expect(paths.has(".github/workflows/agent-context-checks.yml")).toBe(true);
     expect(paths.has(".github/workflows/doc-gardening.yml")).toBe(true);
     expect(paths.has("scripts/check-agent-context.mjs")).toBe(true);
@@ -106,6 +107,21 @@ describe("scaffold generation", () => {
     expect(paths.has("skills/architecture-update/tests/trigger-cases.md")).toBe(true);
     expect(paths.has("skills/adaptive-refactor/SKILL.md")).toBe(true);
     expect(paths.has("skills/adaptive-refactor/tests/trigger-cases.md")).toBe(true);
+  });
+
+  it("renders stack-aware CI checks for scaffold output", () => {
+    const input = baseInput({ projectShape: "api-service", techStack: "TypeScript + Node.js" });
+    const plan = buildProjectPlan(input);
+    const files = createScaffoldFiles(input, plan, null);
+    const ciWorkflow = files.find((file) => file.path === ".github/workflows/ci.yml")?.content ?? "";
+
+    expect(ciWorkflow).toContain("node scripts/check-agent-context.mjs");
+    expect(ciWorkflow).toContain("node scripts/check-doc-freshness.mjs");
+    expect(ciWorkflow).toContain("node scripts/check-skills.mjs");
+    expect(ciWorkflow).toContain("npx tsc --noEmit");
+    expect(ciWorkflow).toContain("npm run test");
+    expect(ciWorkflow).toContain("npm run build");
+    expect(ciWorkflow).not.toContain("npm run check");
   });
 
   it("embeds configurable Codex fallback parsing in agent context checks", () => {

@@ -15,7 +15,12 @@ import {
   toJsonErrorPayload,
   type CliOutputFormat
 } from "./core/errors.js";
-import type { FixCommandOptions, GenerateLogsCommandOptions, InitCommandOptions, RefactorCommandOptions } from "./core/types.js";
+import type {
+  FixCommandOptions,
+  GenerateLogsCommandOptions,
+  InitCommandOptions,
+  RefactorCommandOptions
+} from "./core/types.js";
 import packageJson from "../package.json" with { type: "json" };
 
 const program = new Command();

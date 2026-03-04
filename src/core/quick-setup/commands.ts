@@ -1,4 +1,5 @@
 import type { AiQuickSetupPlan, QuickSetupPreset } from "../types.js";
+import type { ProjectShape } from "../types.js";
 
 export interface SetupCommand {
   command: string;
@@ -10,9 +11,27 @@ export function buildCommandsForPreset(
   preset: QuickSetupPreset,
   plan: AiQuickSetupPlan,
   hasPackageJson: boolean,
-  hasTsconfig: boolean
+  hasTsconfig: boolean,
+  options: {
+    hasPackageSwift?: boolean;
+    projectShape?: ProjectShape;
+  } = {}
 ): SetupCommand[] {
   const commands: SetupCommand[] = [];
+  const hasPackageSwift = options.hasPackageSwift ?? false;
+  const projectShape = options.projectShape ?? "custom";
+
+  if (preset === "swift-spm") {
+    const packageType = projectShape === "library" ? "library" : "executable";
+    if (!hasPackageSwift) {
+      commands.push({
+        command: "swift",
+        args: ["package", "init", "--type", packageType],
+        label: `Initialize Swift package (${packageType})`
+      });
+    }
+    return commands;
+  }
 
   if (!hasPackageJson) {
     commands.push({

@@ -20,6 +20,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "lint": "tsc --noEmit",
+    "check": "node scripts/check-agent-context.mjs && node scripts/check-doc-freshness.mjs && node scripts/check-skills.mjs && npm run lint && npm run test && npm run build",
     "prepublishOnly": "npm run lint && npm run test && npm run build",
     "release:patch": "npm version patch",
     "release:minor": "npm version minor",

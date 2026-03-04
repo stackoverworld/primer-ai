@@ -154,6 +154,7 @@ ${conventions.map((entry) => `- ${entry}`).join("\n")}
 - Start from a short plan, then implement minimal viable changes.
 - Keep commits scoped and reversible.
 - Validate locally before asking for review.
+- Prefer a single project-level check entrypoint (\`check\` script/command) that CI and developers both use.
 
 ## Verification
 - \`node scripts/check-agent-context.mjs\`
@@ -248,6 +249,7 @@ ${plan.verificationCommands.map((command) => `  - \`${command}\``).join("\n")}
 
 ## Doc-Gardening Loop
 - Scheduled CI workflow runs weekly and opens a PR when docs drift.
+- Keep \`.github/workflows/ci.yml\` aligned with this document's verification commands.
 - Use \`node scripts/doc-garden.mjs --apply\` to refresh docs index and review metadata locally.
 - Every architecture-affecting change must include docs and ADR updates.
 `);

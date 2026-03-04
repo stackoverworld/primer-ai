@@ -83,11 +83,16 @@ export async function runAiQuickSetup(
 
   const packageJsonPath = join(targetDir, "package.json");
   const tsconfigPath = join(targetDir, "tsconfig.json");
+  const packageSwiftPath = join(targetDir, "Package.swift");
   const commands = buildCommandsForPreset(
     support.preset,
     aiPlan.plan,
     existsSync(packageJsonPath),
-    existsSync(tsconfigPath)
+    existsSync(tsconfigPath),
+    {
+      hasPackageSwift: existsSync(packageSwiftPath),
+      projectShape: input.projectShape
+    }
   );
 
   let executedCommands = 0;

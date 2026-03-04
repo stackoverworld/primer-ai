@@ -62,6 +62,13 @@ function hasAllScripts(scripts: Set<string>, required: string[]): boolean {
 }
 
 export function isPresetAlreadyConfigured(targetDir: string, preset: QuickSetupPreset): boolean {
+  if (preset === "swift-spm") {
+    const hasPackageSwift = existsSync(join(targetDir, "Package.swift"));
+    const hasSources = existsSync(join(targetDir, "Sources"));
+    const hasTests = existsSync(join(targetDir, "Tests"));
+    return hasPackageSwift && (hasSources || hasTests);
+  }
+
   const manifest = readPackageManifest(targetDir);
   const hasTsconfig = existsSync(join(targetDir, "tsconfig.json"));
   if (!manifest.hasPackageJson) return false;

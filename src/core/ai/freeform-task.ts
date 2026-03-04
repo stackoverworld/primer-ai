@@ -1,6 +1,6 @@
 import { runFreeformTask, summarizeFailure } from "./providers.js";
 import { combineOutput, resolveProviderForTask, runWithLiveStatus } from "./task-shared.js";
-import type { AgentTarget, AiProvider } from "../types.js";
+import type { AgentTarget, AiProvider, ClaudeEffort, CodexReasoningEffort } from "../types.js";
 import type { StatusCallback } from "./contracts.js";
 
 export interface AiTaskResult {
@@ -24,6 +24,9 @@ interface RunAiFreeformTaskOptions {
   maxSubagents?: number;
   expectFileWrites?: boolean;
   stopOnRefactorStatusMarker?: boolean;
+  reasoningEffort?: CodexReasoningEffort;
+  claudeEffort?: ClaudeEffort;
+  claudeFastMode?: boolean;
 }
 
 const WRITE_BLOCK_MARKERS = [
@@ -88,7 +91,10 @@ export async function runAiFreeformTask(options: RunAiFreeformTaskOptions): Prom
       showAiFileOps: options.showAiFileOps,
       orchestration: options.orchestration,
       maxSubagents: options.maxSubagents,
-      stopOnRefactorStatusMarker: options.stopOnRefactorStatusMarker ?? (options.expectFileWrites ?? false)
+      stopOnRefactorStatusMarker: options.stopOnRefactorStatusMarker ?? (options.expectFileWrites ?? false),
+      ...(options.claudeEffort ? { claudeEffort: options.claudeEffort } : {}),
+      ...(options.claudeFastMode ? { claudeFastMode: true } : {}),
+      ...(options.reasoningEffort ? { reasoningEffort: options.reasoningEffort } : {})
     })
   );
 

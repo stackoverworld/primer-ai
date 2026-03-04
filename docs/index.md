@@ -2,7 +2,7 @@
 
 This folder is the source of truth for architecture and delivery guidance.
 
-- Last reviewed: 2026-02-16
+- Last reviewed: 2026-02-17
 
 ## Core Documents
 - `architecture.md`: architectural boundaries, module ownership, and dependency rules.

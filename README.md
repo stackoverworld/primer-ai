@@ -159,10 +159,11 @@ Available in AI-assisted mode for supported stacks:
 - Next.js + TypeScript (`nextjs-ts`)
 - React + Vite + TypeScript (`vite-react-ts`)
 - TypeScript + Node.js (`node-ts`) for `api-service`, `cli-tool`, `library`, `custom`
+- Swift + SwiftPM (`swift-spm`) for `api-service`, `cli-tool`, `library`, `custom`
 
 Not enabled yet:
 - monorepo quick setup
-- Swift/iOS quick setup
+- Swift/iOS (Xcode) quick setup
 
 ## Command Reference
 

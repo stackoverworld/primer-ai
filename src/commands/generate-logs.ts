@@ -15,6 +15,7 @@ const DEFAULT_AI_TIMEOUT_SEC = 1800;
 const MIN_AI_TIMEOUT_SEC = 60;
 const MAX_AI_TIMEOUT_SEC = 14_400;
 const VERSION_LITERAL_PATTERN = /^v?\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/i;
+const GITHUB_HANDLE_PATTERN = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/;
 const MAX_DIFF_CHARS = 120_000;
 const MAX_LOG_SECTION_CHARS = 8_000;
 
@@ -377,6 +378,23 @@ function normalizeBulletText(value: string): string {
   return `${withoutThanks}.`;
 }
 
+function normalizeThanksHandle(value: string | undefined): string | null {
+  if (value === undefined) return null;
+  const normalized = value.trim().replace(/^@+/, "");
+  if (!normalized) return null;
+  if (!GITHUB_HANDLE_PATTERN.test(normalized)) {
+    throw new UserInputError(
+      `Invalid --thanks value "${value}". Expected GitHub handle format (letters, numbers, hyphens).`
+    );
+  }
+  return normalized;
+}
+
+function appendThanksSuffix(entry: string, thanksHandle: string | null): string {
+  if (!thanksHandle) return entry;
+  return `${entry} Thanks @${thanksHandle}.`;
+}
+
 function renderMarkdown(changes: string[], fixes: string[]): string {
   const lines: string[] = [];
   if (changes.length > 0) {
@@ -562,10 +580,15 @@ export async function runGenerateLogs(pathArg: string | undefined, options: Gene
     throw new ExecutionError("AI output could not be parsed into release log schema (changes/fixes JSON).");
   }
 
-  const changes = Array.from(
+  const thanksHandle = normalizeThanksHandle(options.thanks);
+  const dedupedChanges = Array.from(
     new Set(parsed.changes.map((entry) => normalizeBulletText(entry)).filter((entry) => entry.length > 0))
   );
-  const fixes = Array.from(new Set(parsed.fixes.map((entry) => normalizeBulletText(entry)).filter((entry) => entry.length > 0)));
+  const dedupedFixes = Array.from(
+    new Set(parsed.fixes.map((entry) => normalizeBulletText(entry)).filter((entry) => entry.length > 0))
+  );
+  const changes = dedupedChanges.map((entry) => appendThanksSuffix(entry, thanksHandle));
+  const fixes = dedupedFixes.map((entry) => appendThanksSuffix(entry, thanksHandle));
 
   if (changes.length === 0) {
     log.info("Step 3/4: No changes entries generated for this range.");

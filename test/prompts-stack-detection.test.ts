@@ -75,4 +75,33 @@ describe("existing-project stack detection", () => {
       rmSync(targetPath, { recursive: true, force: true });
     }
   });
+
+  it("detects Swift + SPM from Package.swift", async () => {
+    const targetPath = createFixture("primer-ai-swift-spm-");
+    writeFileSync(
+      join(targetPath, "Package.swift"),
+      `// swift-tools-version: 5.10
+import PackageDescription
+
+let package = Package(
+    name: "DemoSPM",
+    products: [
+        .executable(name: "demo-spm", targets: ["DemoSPM"])
+    ],
+    targets: [
+        .executableTarget(name: "DemoSPM")
+    ]
+)
+`,
+      "utf8"
+    );
+
+    try {
+      const input = await collectInitInput(targetPath, { yes: true });
+      expect(input.existingProject).toBe(true);
+      expect(input.techStack).toBe("Swift + SPM");
+    } finally {
+      rmSync(targetPath, { recursive: true, force: true });
+    }
+  });
 });
