@@ -10,7 +10,7 @@ The project started from deep research across modern AI workflows (including Cha
 
 ## Demo
 
-<video src="https://github.com/stackoverworld/primer-ai/raw/main/docs/assets/demo.mp4" controls width="700"></video>
+https://github.com/user-attachments/assets/6633d001-799f-4e6e-b47e-69f252f51a03
 
 ## Why This Exists
 
