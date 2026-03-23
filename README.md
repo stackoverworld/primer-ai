@@ -8,6 +8,10 @@
 
 The project started from deep research across modern AI workflows (including ChatGPT and Claude research tooling) to capture practical patterns that are usually missing when teams run ad-hoc `/init` prompts.
 
+## Demo
+
+<video src="https://github.com/stackoverworld/primer-ai/raw/main/docs/assets/demo.mp4" controls width="700"></video>
+
 ## Why This Exists
 
 Most AI coding sessions are stateless and inconsistent across runs. `primer-ai` creates explicit project context surfaces so assistants can work from shared, versioned rules:
